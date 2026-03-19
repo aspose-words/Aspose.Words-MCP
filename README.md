@@ -38,8 +38,8 @@ pip install aspose-words-mcp
 From source (download repo and install requirements):
 
 ```bash
-git clone https://github.com/aspose-words/Aspose.Words-MCP-Server
-cd Aspose.Words-MCP-Server
+git clone https://github.com/aspose-words/Aspose.Words-MCP
+cd Aspose.Words-MCP
 pip install -r requirements.txt
 ```
 

@@ -41,8 +41,8 @@ classifiers = [
 ]
 
 [project.urls]
-"Documentation" = "https://github.com/aspose-words/Aspose.Words-MCP-Server#readme"
-"Repository" = "https://github.com/aspose-words/Aspose.Words-MCP-Server"
+"Documentation" = "https://github.com/aspose-words/Aspose.Words-MCP#readme"
+"Repository" = "https://github.com/aspose-words/Aspose.Words-MCP"
 "Free Support" = "https://forum.aspose.com/c/words/8"
 
 [tool.setuptools]
