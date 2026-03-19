@@ -6,6 +6,10 @@ The format is based on "Keep a Changelog", and versioning adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-03-19
+### Updated
+- Integration with Aspose.Words 25.12.0.
+
 ## [0.1.0] - 2025-12-02
 ### Added
 - Initial version of the MCP server for Aspose.Words automation (based on FastMCP).
