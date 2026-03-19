@@ -6,6 +6,11 @@ The format is based on "Keep a Changelog", and versioning adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-03-19
+### Updated
+- Integration with Aspose.Words 26.2.0.
+- No MCP tool behavior changes were required for this release; update aligns dependency with upstream API.
+
 ## [0.1.7] - 2026-03-19
 ### Updated
 - Integration with Aspose.Words 26.1.0.
