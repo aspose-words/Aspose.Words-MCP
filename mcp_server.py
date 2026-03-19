@@ -20,7 +20,7 @@ from core import io as _io
 from core.store import document_store
 from core.utils import license as _license
 
-mcp = FastMCP('Aspose.Words MCP Server')
+mcp = FastMCP('Aspose.Words MCP')
 
 def _setup_logging():
     level = os.getenv('LOG_LEVEL', '')
@@ -801,7 +801,7 @@ def run_server(transport: str | None=None, host: str='0.0.0.0', port: int=8080, 
     port_env = int(os.getenv('MCP_PORT') or os.getenv('PORT') or port)
     path_http_env = (os.getenv('MCP_PATH') or path)
     path_sse_env = (os.getenv('MCP_SSE_PATH') or '/sse')
-    logger.info('Starting Aspose.Words MCP Server (FastMCP)...')
+    logger.info('Starting Aspose.Words MCP (FastMCP)...')
     logger.info(f'Transport: %s', tr)
     if tr in {'streamable-http', 'sse'}:
         path_for_tr = path_sse_env if tr == 'sse' else path_http_env
