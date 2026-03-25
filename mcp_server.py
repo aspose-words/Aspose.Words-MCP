@@ -1,22 +1,24 @@
-import os
 import base64
 import logging
+import os
 from pathlib import Path
 from typing import Optional
+
 from fastmcp import FastMCP
-from core import tables as _tables
-from core import layout as _layout
-from core import export as _export
-from core import properties as _properties
-from core import notes as _notes
+
 from core import comments as _comments
-from core import protection as _protection
-from core import watermarks as _watermarks
-from core import links as _links
-from core import styles as _styles
 from core import content as _content
-from core import reading as _reading
+from core import export as _export
 from core import io as _io
+from core import layout as _layout
+from core import links as _links
+from core import notes as _notes
+from core import properties as _properties
+from core import protection as _protection
+from core import reading as _reading
+from core import styles as _styles
+from core import tables as _tables
+from core import watermarks as _watermarks
 from core.store import document_store
 from core.utils import license as _license
 
@@ -1674,7 +1676,7 @@ def run_server(
     path_http_env = os.getenv('MCP_PATH') or path
     path_sse_env = os.getenv('MCP_SSE_PATH') or '/sse'
     logger.info('Starting Aspose.Words MCP (FastMCP)...')
-    logger.info(f'Transport: %s', tr)
+    logger.info('Transport: %s', tr)
     if tr in {'streamable-http', 'sse'}:
         path_for_tr = path_sse_env if tr == 'sse' else path_http_env
         logger.info('Listening on http://%s:%s%s (%s)', host_env, port_env, path_for_tr, tr)

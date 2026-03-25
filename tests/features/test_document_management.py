@@ -1,11 +1,12 @@
 import base64
+
 import pytest
 
 pytest.importorskip('aspose.words')
 import mcp_server as srv
 from core import content as _content
-from core import io as _io
 from core import export as _export
+from core import io as _io
 from core import reading as _reading
 
 

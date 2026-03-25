@@ -1,6 +1,6 @@
 import logging
-from typing import Dict, Optional
 import threading
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 

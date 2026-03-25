@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional, List, Any
+from typing import Any, List, Optional
 
 import aspose.words as aw
 from aspose.pydrawing import Color

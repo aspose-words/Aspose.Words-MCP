@@ -1,8 +1,11 @@
 from __future__ import annotations
-from typing import Optional, Tuple, List
-from pathlib import Path
+
 import uuid
+from pathlib import Path
+from typing import List, Optional, Tuple
+
 import aspose.words as aw
+
 from core.utils.docs_util import docx_path, ensure_path, get_data_dir
 
 
