@@ -59,7 +59,10 @@ def test_add_page_break_via_tool():
 
 
 def _png_1x1_b64():
-    return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8AABQMBgYJ4V7wAAAAASUVORK5CYII='
+    return (
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8AABQMB'
+        'gYJ4V7wAAAAASUVORK5CYII='
+    )
 
 
 def test_near_text_insertions_and_lists():

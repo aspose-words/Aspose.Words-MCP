@@ -8,6 +8,7 @@ from core import content as _content
 from core import export as _export
 from core import io as _io
 from core import reading as _reading
+from core.utils import docs_util as _docs
 
 
 def test_create_and_get_info():
@@ -67,9 +68,6 @@ def test_merge_invalid_ids_raises():
     a_id, _ = _io.create_document('a.docx')
     with pytest.raises(FileNotFoundError):
         _io.merge([a_id, 'missing-id'])
-
-
-from core.utils import docs_util as _docs
 
 
 def test_list_copy_text_xml_save_delete_merge():
