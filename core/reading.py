@@ -3,11 +3,16 @@ from io import BytesIO
 from pathlib import Path
 import aspose.words as aw
 
+
 def _docs():
     from core.utils import docs_util as _d
+
     return _d
 
-def read_paragraphs(doc_id: str, start: Optional[int]=None, end: Optional[int]=None) -> List[str]:
+
+def read_paragraphs(
+    doc_id: str, start: Optional[int] = None, end: Optional[int] = None
+) -> List[str]:
     path = _docs().ensure_path(doc_id)
     doc = aw.Document(str(path))
     nodes = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
@@ -22,7 +27,8 @@ def read_paragraphs(doc_id: str, start: Optional[int]=None, end: Optional[int]=N
     e = max(s, min(e, len(texts)))
     return texts[s:e]
 
-def find_text(doc_id: str, text: str='', match_case: bool=False, whole_word: bool=False):
+
+def find_text(doc_id: str, text: str = '', match_case: bool = False, whole_word: bool = False):
     path = _docs().ensure_path(doc_id)
     doc = aw.Document(str(path))
     paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
@@ -46,10 +52,12 @@ def find_text(doc_id: str, text: str='', match_case: bool=False, whole_word: boo
             matches.append(i)
     return matches
 
+
 def get_text(doc_id: str) -> str:
     path = _docs().ensure_path(doc_id)
     doc = aw.Document(str(path))
     return doc.get_text()
+
 
 def get_xml(doc_id: str) -> str:
     path = _docs().ensure_path(doc_id)
@@ -57,6 +65,7 @@ def get_xml(doc_id: str) -> str:
     buf = BytesIO()
     doc.save(buf, aw.SaveFormat.WORD_ML)
     return buf.getvalue().decode('utf-8')
+
 
 def get_outline(doc_id: str):
     path = _docs().ensure_path(doc_id)
@@ -69,7 +78,17 @@ def get_outline(doc_id: str):
     doc = aw.Document(buf)
     nodes = _docs().get_paragraph_nodes(doc)
     items: List[Dict[str, Any]] = []
-    heading_map: Dict[Any, int] = {aw.StyleIdentifier.HEADING1: 1, aw.StyleIdentifier.HEADING2: 2, aw.StyleIdentifier.HEADING3: 3, aw.StyleIdentifier.HEADING4: 4, aw.StyleIdentifier.HEADING5: 5, aw.StyleIdentifier.HEADING6: 6, aw.StyleIdentifier.HEADING7: 7, aw.StyleIdentifier.HEADING8: 8, aw.StyleIdentifier.HEADING9: 9}
+    heading_map: Dict[Any, int] = {
+        aw.StyleIdentifier.HEADING1: 1,
+        aw.StyleIdentifier.HEADING2: 2,
+        aw.StyleIdentifier.HEADING3: 3,
+        aw.StyleIdentifier.HEADING4: 4,
+        aw.StyleIdentifier.HEADING5: 5,
+        aw.StyleIdentifier.HEADING6: 6,
+        aw.StyleIdentifier.HEADING7: 7,
+        aw.StyleIdentifier.HEADING8: 8,
+        aw.StyleIdentifier.HEADING9: 9,
+    }
     for i in range(nodes.count):
         p = nodes[i]
         pobj = p.as_paragraph()
@@ -100,6 +119,7 @@ def get_outline(doc_id: str):
             items.append({'text': t, 'level': int(level), 'paragraphIndex': i})
     return items
 
+
 def get_info(doc_id: str) -> Dict[str, Any]:
     path = _docs().ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -108,7 +128,13 @@ def get_info(doc_id: str) -> Dict[str, Any]:
     paragraphs = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True).count
     pages = doc.page_count
     size = path.stat().st_size
-    return {'sizeBytes': int(size), 'words': int(words), 'paragraphs': int(paragraphs), 'pages': pages}
+    return {
+        'sizeBytes': int(size),
+        'words': int(words),
+        'paragraphs': int(paragraphs),
+        'pages': pages,
+    }
+
 
 def stats(doc_id: str) -> Dict[str, int]:
     path = _docs().ensure_path(doc_id)
@@ -118,6 +144,7 @@ def stats(doc_id: str) -> Dict[str, int]:
     paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True).count
     pages = doc.page_count
     return {'words': int(words), 'paragraphs': int(paras), 'pages': int(pages)}
+
 
 def list_documents() -> list:
     ids: List[str] = []

@@ -1,6 +1,8 @@
 import pytest
+
 pytest.importorskip('aspose.words')
 import mcp_server as srv
+
 
 def test_protect_unprotect_and_restrict():
     res = srv.tool_create_document('secure.docx')
@@ -11,6 +13,7 @@ def test_protect_unprotect_and_restrict():
     srv.tool_insert_text_end(did, ' after')
     paras = srv.tool_read_paragraphs(did)['paragraphs']
     assert any(('after' in (p or '') for p in paras))
+
 
 def test_comments_and_notes_smoke():
     res = srv.tool_create_document('notes.docx')

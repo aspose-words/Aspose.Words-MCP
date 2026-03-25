@@ -1,6 +1,8 @@
 import pytest
+
 pytest.importorskip('aspose.words')
 import mcp_server as srv
+
 
 def test_headers_footers_and_numbering():
     res = srv.tool_create_document('p0-hf.docx')

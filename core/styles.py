@@ -3,7 +3,17 @@ from typing import Optional
 import aspose.words as aw
 from core.utils.docs_util import ensure_path, hex_to_color
 
-def create_style(doc_id: str, style_name: Optional[str]=None, base_style: Optional[str]=None, font_size: Optional[float]=None, font_name: Optional[str]=None, bold: Optional[bool]=None, italic: Optional[bool]=None, color_hex: Optional[str]=None) -> str:
+
+def create_style(
+    doc_id: str,
+    style_name: Optional[str] = None,
+    base_style: Optional[str] = None,
+    font_size: Optional[float] = None,
+    font_name: Optional[str] = None,
+    bold: Optional[bool] = None,
+    italic: Optional[bool] = None,
+    color_hex: Optional[str] = None,
+) -> str:
     if not style_name:
         raise TypeError('style_name must be provided')
     path = ensure_path(doc_id)

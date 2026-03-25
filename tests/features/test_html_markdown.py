@@ -1,6 +1,8 @@
 import pytest
+
 pytest.importorskip('aspose.words')
 import mcp_server as srv
+
 
 def test_insert_html_variants():
     r = srv.tool_create_document('p0-html.docx')
@@ -12,6 +14,7 @@ def test_insert_html_variants():
     joined = '\n'.join(paras)
     for needle in ('Html End', 'Html Start', 'Html P0'):
         assert needle in joined
+
 
 def test_insert_markdown_variants():
     r = srv.tool_create_document('p0-md.docx')

@@ -32,10 +32,10 @@ def pytest_sessionfinish(session, exitstatus):
 @pytest.fixture
 def mcp_base_url():
     with run_server_in_process(
-            srv.run_server,
-            provide_host_and_port=True,
-            transport='streamable-http',
-            path='/mcp',
+        srv.run_server,
+        provide_host_and_port=True,
+        transport='streamable-http',
+        path='/mcp',
     ) as base_url:
         yield f'{base_url}/mcp'
 
