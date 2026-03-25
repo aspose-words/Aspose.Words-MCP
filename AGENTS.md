@@ -49,4 +49,5 @@ Do not leave server changes without corresponding test coverage adjustments.
 - Do not make cosmetic-only edits.
 - Do not modify unrelated files.
 - Preserve naming conventions, project layout, and code style already used in the repository.
+- Follow the repository Ruff configuration in pyproject.toml for formatting and linting expectations.
 - Update `CHANGELOG.md` when required by the task instructions.

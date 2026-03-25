@@ -68,5 +68,11 @@ testpaths = ["tests"]
 target-version = "py311"
 line-length = 100
 
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
 [tool.ruff.lint]
 select = ["E", "F", "I"]
