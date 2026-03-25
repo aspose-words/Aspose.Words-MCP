@@ -13,5 +13,6 @@ def apply_license(license_path: str | None = None) -> None:
         lic.set_license(license_path)
     else:
         logger.warning(
-            'No valid Aspose.Words license found. Running in Evaluation mode. Set ASPOSE_WORDS_LICENSE_PATH.'
+            'No valid Aspose.Words license found. '
+            'Running in Evaluation mode. Set ASPOSE_WORDS_LICENSE_PATH.'
         )
