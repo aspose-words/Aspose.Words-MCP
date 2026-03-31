@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from typing import Optional
+
 import aspose.words as aw
+
 from core.utils.docs_util import ensure_path, hex_to_color
 
 

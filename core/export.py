@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 from io import BytesIO
-from typing import Dict, Optional, Tuple, Any
+from typing import Any, Dict, Optional, Tuple
+
 import aspose.words as aw
+
 from core.utils.docs_util import ensure_path, ensure_resources_dir
 
 

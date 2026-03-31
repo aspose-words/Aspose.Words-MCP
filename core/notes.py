@@ -1,13 +1,16 @@
 from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
+
 import aspose.words as aw
+
 from core.utils.docs_util import (
     ensure_path,
-    get_paragraph_nodes,
     find_paragraph_indices_by_anchor,
+    get_paragraph_nodes,
+    hex_to_color,
     normalize_text_for_match,
     safe_count,
-    hex_to_color,
 )
 
 

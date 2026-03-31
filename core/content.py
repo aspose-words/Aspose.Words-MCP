@@ -1,14 +1,17 @@
 from __future__ import annotations
-from typing import List, Optional
+
 from io import BytesIO
+from typing import List, Optional
+
 import aspose.words as aw
+
 from core.utils.docs_util import (
     ensure_path,
+    find_paragraph_indices_by_anchor,
+    hex_to_color,
     move_builder,
     resolve_heading_style_identifier,
     resolve_outline_level,
-    hex_to_color,
-    find_paragraph_indices_by_anchor,
 )
 
 
