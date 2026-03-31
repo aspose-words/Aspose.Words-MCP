@@ -2,7 +2,15 @@ from __future__ import annotations
 from typing import List, Optional
 from io import BytesIO
 import aspose.words as aw
-from core.utils.docs_util import ensure_path, move_builder, resolve_heading_style_identifier, resolve_outline_level, hex_to_color, find_paragraph_indices_by_anchor
+from core.utils.docs_util import (
+    ensure_path,
+    move_builder,
+    resolve_heading_style_identifier,
+    resolve_outline_level,
+    hex_to_color,
+    find_paragraph_indices_by_anchor,
+)
+
 
 def find_heading_style_by_name(doc: aw.Document, level: int):
     lvl = level
@@ -26,6 +34,7 @@ def find_heading_style_by_name(doc: aw.Document, level: int):
                 fallback = s
     return preferred or fallback
 
+
 def get_heading_style_object(doc: aw.Document, level: int):
     sid = resolve_heading_style_identifier(level)
     style_obj = doc.styles.get_by_style_identifier(sid)
@@ -35,7 +44,10 @@ def get_heading_style_object(doc: aw.Document, level: int):
             style_obj = find_heading_style_by_name(doc, level)
     return style_obj
 
-def insert_text(doc_id: str, text: str='', where: str='end', paragraph_index: Optional[int]=None) -> bool:
+
+def insert_text(
+    doc_id: str, text: str = '', where: str = 'end', paragraph_index: Optional[int] = None
+) -> bool:
     file_path = ensure_path(doc_id)
     doc = aw.Document(str(file_path))
     builder = aw.DocumentBuilder(doc)
@@ -44,7 +56,16 @@ def insert_text(doc_id: str, text: str='', where: str='end', paragraph_index: Op
     doc.save(str(file_path))
     return True
 
-def replace_text(doc_id: str, search: str='', replace: str='', replace_all: bool=True, case_sensitive: bool=False, whole_word: bool=False, use_regex: bool=False) -> int:
+
+def replace_text(
+    doc_id: str,
+    search: str = '',
+    replace: str = '',
+    replace_all: bool = True,
+    case_sensitive: bool = False,
+    whole_word: bool = False,
+    use_regex: bool = False,
+) -> int:
     file_path = ensure_path(doc_id)
     doc = aw.Document(str(file_path))
     options = aw.replacing.FindReplaceOptions()
@@ -56,6 +77,7 @@ def replace_text(doc_id: str, search: str='', replace: str='', replace_all: bool
 
     if use_regex:
         import re
+
         flags = 0 if case_sensitive else re.IGNORECASE
         pattern = re.compile(search, flags)
         count = doc.range.replace(pattern, replace, options)
@@ -64,7 +86,8 @@ def replace_text(doc_id: str, search: str='', replace: str='', replace_all: bool
     doc.save(str(file_path))
     return int(count)
 
-def read_paragraphs(doc_id: str, start: Optional[int]=None, end: Optional[int]=None):
+
+def read_paragraphs(doc_id: str, start: Optional[int] = None, end: Optional[int] = None):
     file_path = ensure_path(doc_id)
     doc = aw.Document(str(file_path))
     nodes = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
@@ -79,7 +102,15 @@ def read_paragraphs(doc_id: str, start: Optional[int]=None, end: Optional[int]=N
     e = max(s, min(e, len(texts)))
     return texts[s:e]
 
-def insert_image(doc_id: str, image_bytes: bytes=b'', where: str='end', width_points: Optional[float]=None, height_points: Optional[float]=None, keep_aspect: bool=False) -> bool:
+
+def insert_image(
+    doc_id: str,
+    image_bytes: bytes = b'',
+    where: str = 'end',
+    width_points: Optional[float] = None,
+    height_points: Optional[float] = None,
+    keep_aspect: bool = False,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
@@ -106,7 +137,10 @@ def insert_image(doc_id: str, image_bytes: bytes=b'', where: str='end', width_po
     doc.save(str(path))
     return True
 
-def insert_html(doc_id: str, html: str='', where: str='end', paragraph_index: Optional[int]=None) -> bool:
+
+def insert_html(
+    doc_id: str, html: str = '', where: str = 'end', paragraph_index: Optional[int] = None
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
@@ -115,7 +149,10 @@ def insert_html(doc_id: str, html: str='', where: str='end', paragraph_index: Op
     doc.save(str(path))
     return True
 
-def insert_markdown(doc_id: str, markdown: str='', where: str='end', paragraph_index: Optional[int]=None) -> bool:
+
+def insert_markdown(
+    doc_id: str, markdown: str = '', where: str = 'end', paragraph_index: Optional[int] = None
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
@@ -124,7 +161,19 @@ def insert_markdown(doc_id: str, markdown: str='', where: str='end', paragraph_i
     doc.save(str(path))
     return True
 
-def add_heading(doc_id: str, text: str='', level: int=1, font_name: Optional[str]=None, font_size: Optional[float]=None, bold: Optional[bool]=None, italic: Optional[bool]=None, border_bottom: Optional[bool]=None, where: str='end', paragraph_index: Optional[int]=None) -> bool:
+
+def add_heading(
+    doc_id: str,
+    text: str = '',
+    level: int = 1,
+    font_name: Optional[str] = None,
+    font_size: Optional[float] = None,
+    bold: Optional[bool] = None,
+    italic: Optional[bool] = None,
+    border_bottom: Optional[bool] = None,
+    where: str = 'end',
+    paragraph_index: Optional[int] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
@@ -147,7 +196,19 @@ def add_heading(doc_id: str, text: str='', level: int=1, font_name: Optional[str
     doc.save(str(path))
     return True
 
-def add_paragraph(doc_id: str, text: str='', style: Optional[str]=None, font_name: Optional[str]=None, font_size: Optional[float]=None, bold: Optional[bool]=None, italic: Optional[bool]=None, color_hex: Optional[str]=None, where: str='end', paragraph_index: Optional[int]=None) -> bool:
+
+def add_paragraph(
+    doc_id: str,
+    text: str = '',
+    style: Optional[str] = None,
+    font_name: Optional[str] = None,
+    font_size: Optional[float] = None,
+    bold: Optional[bool] = None,
+    italic: Optional[bool] = None,
+    color_hex: Optional[str] = None,
+    where: str = 'end',
+    paragraph_index: Optional[int] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
@@ -171,7 +232,8 @@ def add_paragraph(doc_id: str, text: str='', style: Optional[str]=None, font_nam
     doc.save(str(path))
     return True
 
-def add_page_break(doc_id: str, where: str='end', paragraph_index: Optional[int]=None) -> bool:
+
+def add_page_break(doc_id: str, where: str = 'end', paragraph_index: Optional[int] = None) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
@@ -180,7 +242,14 @@ def add_page_break(doc_id: str, where: str='end', paragraph_index: Optional[int]
     doc.save(str(path))
     return True
 
-def insert_list(doc_id: str, items: List[str]=None, kind: str='bullet', where: str='end', paragraph_index: Optional[int]=None) -> bool:
+
+def insert_list(
+    doc_id: str,
+    items: List[str] = None,
+    kind: str = 'bullet',
+    where: str = 'end',
+    paragraph_index: Optional[int] = None,
+) -> bool:
     if items is None:
         items = []
     path = ensure_path(doc_id)
@@ -198,7 +267,18 @@ def insert_list(doc_id: str, items: List[str]=None, kind: str='bullet', where: s
     doc.save(str(path))
     return True
 
-def insert_near_text(doc_id: str, target_text: Optional[str]=None, target_paragraph_index: Optional[int]=None, position: str='after', content_type: str='paragraph', text: Optional[str]=None, level: Optional[int]=None, items: Optional[List[str]]=None, kind: Optional[str]=None) -> bool:
+
+def insert_near_text(
+    doc_id: str,
+    target_text: Optional[str] = None,
+    target_paragraph_index: Optional[int] = None,
+    position: str = 'after',
+    content_type: str = 'paragraph',
+    text: Optional[str] = None,
+    level: Optional[int] = None,
+    items: Optional[List[str]] = None,
+    kind: Optional[str] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
@@ -218,15 +298,39 @@ def insert_near_text(doc_id: str, target_text: Optional[str]=None, target_paragr
         builder.move_to_paragraph(pidx, -1)
     ctype = (content_type or 'paragraph').lower()
     if ctype == 'heading':
-        add_heading(doc_id=doc_id, text=text or '', level=level or 1, where='paragraph', paragraph_index=pidx)
+        add_heading(
+            doc_id=doc_id,
+            text=text or '',
+            level=level or 1,
+            where='paragraph',
+            paragraph_index=pidx,
+        )
     elif ctype == 'list':
-        insert_list(doc_id=doc_id, items=items or [], kind=kind or 'bullet', where='paragraph', paragraph_index=pidx)
+        insert_list(
+            doc_id=doc_id,
+            items=items or [],
+            kind=kind or 'bullet',
+            where='paragraph',
+            paragraph_index=pidx,
+        )
     else:
         builder.writeln(text or '')
         doc.save(str(path))
     return True
 
-def format_range(doc_id: str, paragraph_index: int=0, start: int=0, end: int=0, bold: Optional[bool]=None, italic: Optional[bool]=None, underline: Optional[bool]=None, color_hex: Optional[str]=None, font_name: Optional[str]=None, font_size: Optional[float]=None) -> bool:
+
+def format_range(
+    doc_id: str,
+    paragraph_index: int = 0,
+    start: int = 0,
+    end: int = 0,
+    bold: Optional[bool] = None,
+    italic: Optional[bool] = None,
+    underline: Optional[bool] = None,
+    color_hex: Optional[str] = None,
+    font_name: Optional[str] = None,
+    font_size: Optional[float] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
@@ -265,7 +369,8 @@ def format_range(doc_id: str, paragraph_index: int=0, start: int=0, end: int=0, 
     doc.save(str(path))
     return True
 
-def delete_paragraph(doc_id: str, paragraph_index: int=0) -> bool:
+
+def delete_paragraph(doc_id: str, paragraph_index: int = 0) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)

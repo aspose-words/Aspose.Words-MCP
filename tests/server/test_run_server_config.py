@@ -1,10 +1,12 @@
 import mcp_server as srv
 
+
 def test_run_server_uses_mcp_env_streamable_http(monkeypatch):
     called = {}
 
     def fake_run(**kwargs):
         called.update(kwargs)
+
     monkeypatch.setattr(srv.mcp, 'run', fake_run)
     monkeypatch.setenv('MCP_TRANSPORT', 'streamable-http')
     monkeypatch.setenv('MCP_HOST', '127.0.0.1')
@@ -16,11 +18,13 @@ def test_run_server_uses_mcp_env_streamable_http(monkeypatch):
     assert called.get('port') == 8081
     assert called.get('path') == '/mcp'
 
+
 def test_run_server_uses_mcp_env_sse(monkeypatch):
     called = {}
 
     def fake_run(**kwargs):
         called.update(kwargs)
+
     monkeypatch.setattr(srv.mcp, 'run', fake_run)
     monkeypatch.setenv('MCP_TRANSPORT', 'sse')
     monkeypatch.setenv('MCP_HOST', '0.0.0.0')
@@ -31,6 +35,7 @@ def test_run_server_uses_mcp_env_sse(monkeypatch):
     assert called.get('host') == '0.0.0.0'
     assert called.get('port') == 8082
     assert called.get('path') == '/events'
+
 
 def test_run_server_applies_license_from_env(monkeypatch):
     called = {'lic': None}
@@ -48,6 +53,7 @@ def test_run_server_applies_license_from_env(monkeypatch):
     srv.run_server()
 
     assert called['lic'] == '/tmp/license_env.lic'
+
 
 def test_run_server_applies_license_from_arg_over_env(monkeypatch):
     called = {'lic': None}

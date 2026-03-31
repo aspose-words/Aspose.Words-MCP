@@ -3,7 +3,16 @@ from typing import Optional, List
 import aspose.words as aw
 from core.utils.docs_util import ensure_path, move_builder, hex_to_color
 
-def add_table(doc_id: str, rows: int, cols: int, data: Optional[List[List[str]]]=None, has_header_row: bool=False, where: str='end', paragraph_index: Optional[int]=None) -> int:
+
+def add_table(
+    doc_id: str,
+    rows: int,
+    cols: int,
+    data: Optional[List[List[str]]] = None,
+    has_header_row: bool = False,
+    where: str = 'end',
+    paragraph_index: Optional[int] = None,
+) -> int:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
@@ -27,7 +36,10 @@ def add_table(doc_id: str, rows: int, cols: int, data: Optional[List[List[str]]]
     doc.save(str(path))
     return int(tbl_index)
 
-def table_set_cell_shading(doc_id: str, table_index: int, row_index: int, col_index: int, fill_color_hex: str) -> bool:
+
+def table_set_cell_shading(
+    doc_id: str, table_index: int, row_index: int, col_index: int, fill_color_hex: str
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -46,7 +58,10 @@ def table_set_cell_shading(doc_id: str, table_index: int, row_index: int, col_in
     doc.save(str(path))
     return True
 
-def table_apply_alternating_rows(doc_id: str, table_index: int, color1_hex: str='FFFFFF', color2_hex: str='F2F2F2') -> bool:
+
+def table_apply_alternating_rows(
+    doc_id: str, table_index: int, color1_hex: str = 'FFFFFF', color2_hex: str = 'F2F2F2'
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -65,7 +80,10 @@ def table_apply_alternating_rows(doc_id: str, table_index: int, color1_hex: str=
     doc.save(str(path))
     return True
 
-def table_highlight_header(doc_id: str, table_index: int, header_color_hex: str='4472C4', text_color_hex: str='FFFFFF') -> bool:
+
+def table_highlight_header(
+    doc_id: str, table_index: int, header_color_hex: str = '4472C4', text_color_hex: str = 'FFFFFF'
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -84,7 +102,17 @@ def table_highlight_header(doc_id: str, table_index: int, header_color_hex: str=
     doc.save(str(path))
     return True
 
-def table_set_cell_padding(doc_id: str, table_index: int, row_index: int, col_index: int, top: Optional[float]=None, bottom: Optional[float]=None, left: Optional[float]=None, right: Optional[float]=None) -> bool:
+
+def table_set_cell_padding(
+    doc_id: str,
+    table_index: int,
+    row_index: int,
+    col_index: int,
+    top: Optional[float] = None,
+    bottom: Optional[float] = None,
+    left: Optional[float] = None,
+    right: Optional[float] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -109,6 +137,7 @@ def table_set_cell_padding(doc_id: str, table_index: int, row_index: int, col_in
     doc.save(str(path))
     return True
 
+
 def table_set_column_widths(doc_id: str, table_index: int, widths: List[float]) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -123,7 +152,10 @@ def table_set_column_widths(doc_id: str, table_index: int, widths: List[float]) 
     doc.save(str(path))
     return True
 
-def table_merge_cells(doc_id: str, table_index: int, start_row: int, start_col: int, end_row: int, end_col: int) -> bool:
+
+def table_merge_cells(
+    doc_id: str, table_index: int, start_row: int, start_col: int, end_row: int, end_col: int
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -161,7 +193,15 @@ def table_merge_cells(doc_id: str, table_index: int, start_row: int, start_col: 
     doc.save(str(path))
     return True
 
-def table_set_cell_alignment(doc_id: str, table_index: int, row_index: int, col_index: int, horizontal: Optional[str]=None, vertical: Optional[str]=None) -> bool:
+
+def table_set_cell_alignment(
+    doc_id: str,
+    table_index: int,
+    row_index: int,
+    col_index: int,
+    horizontal: Optional[str] = None,
+    vertical: Optional[str] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -196,7 +236,8 @@ def table_set_cell_alignment(doc_id: str, table_index: int, row_index: int, col_
     doc.save(str(path))
     return True
 
-def table_set_alignment(doc_id: str, table_index: int, horizontal: Optional[str]=None) -> bool:
+
+def table_set_alignment(doc_id: str, table_index: int, horizontal: Optional[str] = None) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -214,7 +255,13 @@ def table_set_alignment(doc_id: str, table_index: int, horizontal: Optional[str]
     doc.save(str(path))
     return True
 
-def table_set_borders(doc_id: str, table_index: int, line_style: Optional[str]=None, line_width: Optional[float]=None) -> bool:
+
+def table_set_borders(
+    doc_id: str,
+    table_index: int,
+    line_style: Optional[str] = None,
+    line_width: Optional[float] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -238,6 +285,7 @@ def table_set_borders(doc_id: str, table_index: int, line_style: Optional[str]=N
     doc.save(str(path))
     return True
 
+
 def table_set_style(doc_id: str, table_index: int, style_name: str) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -249,7 +297,20 @@ def table_set_style(doc_id: str, table_index: int, style_name: str) -> bool:
     doc.save(str(path))
     return True
 
-def table_format_cell_text(doc_id: str, table_index: int, row_index: int, col_index: int, text_content: Optional[str]=None, bold: Optional[bool]=None, italic: Optional[bool]=None, underline: Optional[bool]=None, color_hex: Optional[str]=None, font_size: Optional[float]=None, font_name: Optional[str]=None) -> bool:
+
+def table_format_cell_text(
+    doc_id: str,
+    table_index: int,
+    row_index: int,
+    col_index: int,
+    text_content: Optional[str] = None,
+    bold: Optional[bool] = None,
+    italic: Optional[bool] = None,
+    underline: Optional[bool] = None,
+    color_hex: Optional[str] = None,
+    font_size: Optional[float] = None,
+    font_name: Optional[str] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -285,7 +346,10 @@ def table_format_cell_text(doc_id: str, table_index: int, row_index: int, col_in
     doc.save(str(path))
     return True
 
-def table_set_column_width(doc_id: str, table_index: int, col_index: int, width: float, unit: str='points') -> bool:
+
+def table_set_column_width(
+    doc_id: str, table_index: int, col_index: int, width: float, unit: str = 'points'
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -305,7 +369,8 @@ def table_set_column_width(doc_id: str, table_index: int, col_index: int, width:
     doc.save(str(path))
     return True
 
-def table_set_width(doc_id: str, table_index: int, width: float, unit: str='points') -> bool:
+
+def table_set_width(doc_id: str, table_index: int, width: float, unit: str = 'points') -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     tables = doc.get_child_nodes(aw.NodeType.TABLE, True)
@@ -320,6 +385,7 @@ def table_set_width(doc_id: str, table_index: int, width: float, unit: str='poin
     doc.save(str(path))
     return True
 
+
 def table_auto_fit_columns(doc_id: str, table_index: int) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -330,6 +396,7 @@ def table_auto_fit_columns(doc_id: str, table_index: int) -> bool:
     table_obj.auto_fit(aw.tables.AutoFitBehavior.AUTO_FIT_TO_CONTENTS)
     doc.save(str(path))
     return True
+
 
 def page_width_points(doc: aw.Document) -> float:
     return float(doc.first_section.page_setup.page_width)
