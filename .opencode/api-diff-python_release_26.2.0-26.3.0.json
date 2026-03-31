@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "old_ref": "python/release/26.2.0",
+    "new_ref": "python/release/26.3.0",
+    "generated_at": "2026-03-25T16:13:25Z",
+    "files_scanned_old": 4615,
+    "files_scanned_new": 4620,
+    "output_path": "api-diff-python_release_26.2.0-26.3.0.json",
+    "repo": "https://github.com/aspose-words/Aspose.Words-API-References.git"
+  },
+  "added": [
+    {
+      "doc_path": "english/python-net/aspose.words/joinrunsoptions/_index.md",
+      "kind": "class",
+      "namespace": "aspose.words",
+      "class": "JoinRunsOptions class",
+      "signature": "doc = aw.Document()",
+      "fqname": "aspose.words.JoinRunsOptions class"
+    },
+    {
+      "doc_path": "english/python-net/aspose.words/joinrunsoptions/ignore_insignificant/_index.md",
+      "kind": "property",
+      "namespace": "aspose.words",
+      "class": "JoinRunsOptions",
+      "member": "ignore_insignificant",
+      "signature": "JoinRunsOptions.ignore_insignificant: bool",
+      "fqname": "aspose.words.JoinRunsOptions.ignore_insignificant",
+      "type": "bool"
+    },
+    {
+      "doc_path": "english/python-net/aspose.words/joinrunsoptions/ignore_redundant/_index.md",
+      "kind": "property",
+      "namespace": "aspose.words",
+      "class": "JoinRunsOptions",
+      "member": "ignore_redundant",
+      "signature": "JoinRunsOptions.ignore_redundant: bool",
+      "fqname": "aspose.words.JoinRunsOptions.ignore_redundant",
+      "type": "bool"
+    },
+    {
+      "doc_path": "english/python-net/aspose.words/joinrunsoptions/ignore_spacing/_index.md",
+      "kind": "property",
+      "namespace": "aspose.words",
+      "class": "JoinRunsOptions",
+      "member": "ignore_spacing",
+      "signature": "JoinRunsOptions.ignore_spacing: bool",
+      "fqname": "aspose.words.JoinRunsOptions.ignore_spacing",
+      "type": "bool"
+    },
+    {
+      "doc_path": "english/python-net/aspose.words/joinrunsoptions/__init__/_index.md",
+      "kind": "method",
+      "namespace": "aspose.words",
+      "class": "Joinrunsoptions",
+      "member": "__init__",
+      "signature": "def __init__(self):",
+      "fqname": "aspose.words.Joinrunsoptions.JoinRunsOptions() {#default}"
+    },
+    {
+      "doc_path": "english/python-net/aspose.words/paragraph/join_runs_with_same_formatting/_index.md",
+      "kind": "method",
+      "namespace": "aspose.words",
+      "class": "Paragraph",
+      "member": "join_runs_with_same_formatting",
+      "signature": "def join_runs_with_same_formatting(self, options: aspose.words.JoinRunsOptions):",
+      "fqname": "aspose.words.Paragraph.join_runs_with_same_formatting(options) {#joinrunsoptions}"
+    },
+    {
+      "doc_path": "english/python-net/aspose.words.ai/openaimodel/__init__/_index.md",
+      "kind": "method",
+      "namespace": "aspose.words.ai",
+      "class": "Openaimodel",
+      "member": "__init__",
+      "signature": "def __init__(self, name: str):",
+      "fqname": "aspose.words.ai.Openaimodel.OpenAiModel(name) {#str}"
+    },
+    {
+      "doc_path": "english/python-net/aspose.words.ai/openaimodel/__init__/_index.md",
+      "kind": "method",
+      "namespace": "aspose.words.ai",
+      "class": "Openaimodel",
+      "member": "__init__",
+      "signature": "def __init__(self, name: str, api_key: str):",
+      "fqname": "aspose.words.ai.Openaimodel.OpenAiModel(name, api_key) {#str_str}"
+    }
+  ],
+  "removed": [
+    {
+      "doc_path": "english/python-net/aspose.words/tablestyle/bidi/_index.md",
+      "kind": "property",
+      "namespace": "aspose.words",
+      "class": "TableStyle",
+      "member": "bidi",
+      "signature": "TableStyle.bidi: bool",
+      "fqname": "aspose.words.TableStyle.bidi",
+      "type": "bool"
+    }
+  ],
+  "changed": []
+}
