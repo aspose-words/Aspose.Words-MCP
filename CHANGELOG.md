@@ -6,6 +6,12 @@ The format is based on "Keep a Changelog", and versioning adheres to Semantic Ve
 
 ## [Unreleased]
 
+### Updated
+- Integration with Aspose.Words 26.3.0.
+- Exposed new MCP capabilities for AI summarization and paragraph run joining as part of the 26.3.0 release alignment.
+- Removed `TableStyle.bidi` required no repository changes because the MCP server did not use that API.
+- Updated `qodana.yaml` for native run compatibility by removing the deprecated `ide` field.
+
 ## [0.1.8] - 2026-03-19
 ### Updated
 - Integration with Aspose.Words 26.2.0.

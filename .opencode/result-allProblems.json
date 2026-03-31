@@ -1,0 +1,44 @@
+{
+  "version": "3",
+  "listProblem": [
+    {
+      "tool": "Code Inspection",
+      "category": "Python",
+      "categoryPath": [
+        {
+          "id": "Python",
+          "name": "Python"
+        }
+      ],
+      "type": "Inconsistent return statements",
+      "tags": [
+        "Python"
+      ],
+      "severity": "Moderate",
+      "comment": "Missing return statement on some paths",
+      "detailsInfo": "Highlights inconsistent return statements in functions. According to PEP8, either all return statements in a function should return an expression, or none of them should.\n\n\nPEP8's recommendation:\nEither all return statements in a function should return an expression, or none of them should.\nIf any return statement returns an expression, any return statements where no value is returned\nshould explicitly state this as return None, and an explicit return statement should be present\nat the end of the function (if reachable):\n\n\n    # Correct:\n\n    def foo(x):\n        if x >= 0:\n            return math.sqrt(x)\n        else:\n            return None\n\n    def bar(x):\n        if x < 0:\n            return None\n        return math.sqrt(x)\n\n\n    # Wrong:\n\n    def foo(x):\n        if x >= 0:\n            return math.sqrt(x)\n\n    def bar(x):\n        if x < 0:\n            return\n        return math.sqrt(x)\n\nInspection ID: PyInconsistentReturnsInspection",
+      "sources": [
+        {
+          "type": "file",
+          "path": "core/store.py",
+          "language": "Python",
+          "line": 40,
+          "offset": 9,
+          "length": 16,
+          "code": {
+            "startLine": 38,
+            "length": 16,
+            "offset": 61,
+            "surroundingCode": "\n    def remove_document(self, doc_id: str) -> bool:\n        with self._lock:\n            if doc_id in self._store:\n                del self._store[doc_id]"
+          }
+        }
+      ],
+      "attributes": {
+        "module": "https_github.com_aspose-words_Aspose.Words-MCP-Server.git-816a9085",
+        "inspectionName": "PyInconsistentReturnsInspection"
+      },
+      "hash": "2bfd45863bae2d142ca35eaddd498e89508c61641bdecb22fbb039e111e8f816",
+      "problemType": "REGULAR"
+    }
+  ]
+}

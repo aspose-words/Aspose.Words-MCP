@@ -2,6 +2,7 @@
   "taskId": "1.1",
   "required_gates": [
     "critic",
+    "explorer",
     "reviewer",
     "test_engineer"
   ],
@@ -17,9 +18,14 @@
       "agent": "test_engineer"
     },
     "critic": {
-      "sessionId": "ses_2da37859fffel596OiQ8Nkk6Ql",
-      "timestamp": "2026-03-25T16:44:08.349Z",
+      "sessionId": "ses_2bbc22f51ffedUkB1twZM7i6vO",
+      "timestamp": "2026-03-31T14:17:55.957Z",
       "agent": "critic"
+    },
+    "explorer": {
+      "sessionId": "ses_2bba474efffeUsUKY7lDVeZ43G",
+      "timestamp": "2026-03-31T14:47:45.182Z",
+      "agent": "explorer"
     }
   }
 }

@@ -40,21 +40,24 @@ Swarm: default
 
 | Tool | Calls | Success | Failed | Avg Duration |
 |------|-------|---------|--------|--------------|
-| read | 309 | 309 | 0 | 6ms |
-| grep | 100 | 100 | 0 | 15ms |
-| test_runner | 96 | 96 | 0 | 650ms |
-| task | 74 | 74 | 0 | 70980ms |
-| apply_patch | 64 | 64 | 0 | 899ms |
-| glob | 53 | 53 | 0 | 16ms |
-| bash | 50 | 50 | 0 | 1599ms |
-| pre_check_batch | 28 | 28 | 0 | 4009ms |
-| lint | 28 | 28 | 0 | 4035ms |
-| update_task_status | 17 | 17 | 0 | 4ms |
-| declare_scope | 12 | 12 | 0 | 2ms |
-| diff | 11 | 11 | 0 | 16ms |
-| check_gate_status | 11 | 11 | 0 | 2ms |
-| imports | 7 | 7 | 0 | 55ms |
-| todo_extract | 6 | 6 | 0 | 2ms |
-| save_plan | 2 | 2 | 0 | 11ms |
+| read | 428 | 428 | 0 | 6ms |
+| test_runner | 158 | 158 | 0 | 407ms |
+| grep | 133 | 133 | 0 | 16ms |
+| task | 111 | 111 | 0 | 61811ms |
+| glob | 78 | 78 | 0 | 17ms |
+| bash | 76 | 76 | 0 | 1378ms |
+| apply_patch | 72 | 72 | 0 | 803ms |
+| lint | 37 | 37 | 0 | 3169ms |
+| pre_check_batch | 35 | 35 | 0 | 3325ms |
+| update_task_status | 27 | 27 | 0 | 4ms |
+| diff | 17 | 17 | 0 | 29ms |
+| declare_scope | 17 | 17 | 0 | 2ms |
+| check_gate_status | 16 | 16 | 0 | 2ms |
+| imports | 13 | 13 | 0 | 54ms |
+| todo_extract | 10 | 10 | 0 | 2ms |
+| save_plan | 7 | 7 | 0 | 10ms |
+| knowledgeRecall | 6 | 6 | 0 | 3ms |
 | symbols | 2 | 2 | 0 | 4ms |
 | write_retro | 1 | 1 | 0 | 3ms |
+| doc_scan | 1 | 1 | 0 | 2ms |
+| detect_domains | 1 | 1 | 0 | 2ms |

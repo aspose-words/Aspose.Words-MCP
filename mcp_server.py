@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastmcp import FastMCP
 
+from core import ai as _ai
 from core import comments as _comments
 from core import content as _content
 from core import export as _export
@@ -494,6 +495,25 @@ def tool_export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] =
     return {'base64': b64, 'mime': mime, 'ext': ext}
 
 
+def tool_summarize_document(
+    doc_id: str,
+    model_name: str,
+    summary_length: Optional[str] = 'short',
+    output_name: Optional[str] = None,
+):
+    api_key = (os.getenv('API_KEY') or '').strip()
+    if not api_key:
+        raise ValueError('API_KEY environment variable is required for summarize_document')
+
+    return _ai.summarize_document(
+        doc_id=doc_id,
+        model_name=model_name,
+        api_key=api_key,
+        summary_length=summary_length,
+        output_name=output_name,
+    )
+
+
 def tool_format_text(
     doc_id: str,
     paragraph_index: int,
@@ -519,6 +539,22 @@ def tool_format_text(
         font_size=font_size,
     )
     return {}
+
+
+def tool_join_paragraph_runs(
+    doc_id: str,
+    paragraph_index: int,
+    ignore_redundant: Optional[bool] = None,
+    ignore_insignificant: Optional[bool] = None,
+    ignore_spacing: Optional[bool] = None,
+):
+    return _content.join_paragraph_runs(
+        doc_id=doc_id,
+        paragraph_index=paragraph_index,
+        ignore_redundant=ignore_redundant,
+        ignore_insignificant=ignore_insignificant,
+        ignore_spacing=ignore_spacing,
+    )
 
 
 def tool_set_table_cell_shading(
@@ -1203,6 +1239,22 @@ def register_tools() -> None:
             font_name=font_name,
         )
 
+    @mcp.tool(description='Join runs with the same formatting in a selected paragraph by index')
+    def join_paragraph_runs(
+        doc_id: str,
+        paragraph_index: int,
+        ignore_redundant: Optional[bool] = None,
+        ignore_insignificant: Optional[bool] = None,
+        ignore_spacing: Optional[bool] = None,
+    ):
+        return tool_join_paragraph_runs(
+            doc_id,
+            paragraph_index,
+            ignore_redundant=ignore_redundant,
+            ignore_insignificant=ignore_insignificant,
+            ignore_spacing=ignore_spacing,
+        )
+
     @mcp.tool(description='Apply composite formatting to a table')
     def format_table(
         doc_id: str,
@@ -1652,15 +1704,34 @@ def register_tools() -> None:
     def export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):
         return tool_export_base64_advanced(doc_id, fmt=fmt, options=options)
 
+    @mcp.tool(
+        description=(
+            'Summarize a document using the AI release surface '
+            '(API key is read from server API_KEY environment variable)'
+        )
+    )
+    def summarize_document(
+        doc_id: str,
+        model_name: str,
+        summary_length: Optional[str] = 'short',
+        output_name: Optional[str] = None,
+    ):
+        return tool_summarize_document(
+            doc_id,
+            model_name,
+            summary_length=summary_length,
+            output_name=output_name,
+        )
+
     return None
 
 
 def run_server(
-    transport: str | None = None,
+    transport: Optional[str] = None,
     host: str = '0.0.0.0',
     port: int = 8080,
     path: str = '/mcp',
-    license_path: str | None = None,
+    license_path: Optional[str] = None,
 ):
     logger = _setup_logging()
     _ensure_data_dir_initialized()

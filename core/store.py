@@ -17,19 +17,24 @@ class DocumentStore:
             logger.info(f'Added document to store: {doc_id} ({name})')
 
     def get_document_name(self, doc_id: str) -> Optional[str]:
+        document_name: Optional[str] = None
         with self._lock:
             doc_info = self._store.get(doc_id)
             if doc_info:
-                return doc_info['name']
-            return None
+                document_name = doc_info['name']
+        return document_name
 
     def get_document_info(self, doc_id: str) -> Optional[Dict[str, str]]:
+        document_info: Optional[Dict[str, str]] = None
         with self._lock:
-            return self._store.get(doc_id, None)
+            document_info = self._store.get(doc_id, None)
+        return document_info
 
     def document_exists(self, doc_id: str) -> bool:
+        exists = False
         with self._lock:
-            return doc_id in self._store
+            exists = doc_id in self._store
+        return exists
 
     def remove_document(self, doc_id: str) -> bool:
         with self._lock:
@@ -40,8 +45,10 @@ class DocumentStore:
             return False
 
     def get_all_documents(self) -> Dict[str, Dict[str, str]]:
+        documents_snapshot: Dict[str, Dict[str, str]] = {}
         with self._lock:
-            return self._store.copy()
+            documents_snapshot = self._store.copy()
+        return documents_snapshot
 
     def clear(self) -> None:
         with self._lock:
@@ -50,8 +57,10 @@ class DocumentStore:
             logger.info(f'Cleared {count} documents from store')
 
     def size(self) -> int:
+        document_count = 0
         with self._lock:
-            return len(self._store)
+            document_count = len(self._store)
+        return document_count
 
 
 document_store = DocumentStore()

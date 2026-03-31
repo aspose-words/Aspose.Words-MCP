@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "scanned_at": "2026-03-30T17:29:27.150Z",
+  "files": [
+    {
+      "path": ".pytest_cache/README.md",
+      "title": "pytest cache directory #",
+      "summary": "This directory contains data from the pytest's cache plugin, which provides the `--lf` and `--ff` options, as well as the `cache` fixture. **Do not** commit this to version control. See [the docs](...",
+      "lines": 9,
+      "mtime": 1774455642866.7485
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/caio/src/threadpool/README.md",
+      "title": "README.md",
+      "summary": "[![Build Status](https://travis-ci.org/mbrossard/threadpool.svg?branch=master)](https://travis-ci.org/mbrossard/threadpool) A simple C thread pool implementation ===================================...",
+      "lines": 25,
+      "mtime": 1774455371612.939
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/fastmcp/contrib/bulk_tool_caller/README.md",
+      "title": "Bulk Tool Caller",
+      "summary": "This module provides the `BulkToolCaller` class, which extends the `MCPMixin` to offer tools for performing multiple tool calls in a single request to a FastMCP server. This can be useful for optim...",
+      "lines": 35,
+      "mtime": 1774455375191.9648
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/fastmcp/contrib/component_manager/README.md",
+      "title": "Component Manager – Contrib Module for FastMCP",
+      "summary": "The **Component Manager** provides a unified API for enabling and disabling tools, resources, and prompts at runtime in a FastMCP server. This module is useful for dynamic control over which compon...",
+      "lines": 164,
+      "mtime": 1774455375192.9954
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/fastmcp/contrib/mcp_mixin/README.md",
+      "title": "MCP Mixin",
+      "summary": "from mcp.types import ToolAnnotations This module provides the `MCPMixin` base class and associated decorators (`@mcp_tool`, `@mcp_resource`, `@mcp_prompt`). It allows developers to easily define c...",
+      "lines": 148,
+      "mtime": 1774455375193.8667
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/fastmcp/contrib/README.md",
+      "title": "FastMCP Contrib Modules",
+      "summary": "This directory holds community-contributed modules for FastMCP. These modules extend FastMCP's functionality but are not officially maintained by the core team. **Guarantees:** *   Modules in `cont...",
+      "lines": 19,
+      "mtime": 1774455375191.7166
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/fastmcp/server/providers/openapi/README.md",
+      "title": "OpenAPI Server Implementation (New)",
+      "summary": "This directory contains the next-generation FastMCP server implementation for OpenAPI integration, designed to replace the legacy implementation in `/server/openapi.py`. The new implementation uses...",
+      "lines": 266,
+      "mtime": 1774455375217.1125
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/fastmcp/utilities/openapi/README.md",
+      "title": "OpenAPI Utilities",
+      "summary": "This directory contains the OpenAPI integration utilities for FastMCP. The implementation follows a **stateless request building strategy** using `openapi-core` for high-performance, per-request HT...",
+      "lines": 211,
+      "mtime": 1774455375233.895
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/openapi_pydantic/v3/v3_0/README.md",
+      "title": "OpenAPI v3.0 schema classes",
+      "summary": "Due to the reserved words in python and pydantic, the following fields are used with [alias](https://pydantic-docs.helpmanual.io/usage/schema/#field-customisation) feature provided by pydantic: | C...",
+      "lines": 40,
+      "mtime": 1774455374518.906
+    },
+    {
+      "path": ".venv/lib/python3.13/site-packages/openapi_pydantic/v3/v3_1/README.md",
+      "title": "OpenAPI v3.1 schema classes",
+      "summary": "Due to the reserved words in python and pydantic, the following fields are used with [alias](https://pydantic-docs.helpmanual.io/usage/schema/#field-customisation) feature provided by pydantic: | C...",
+      "lines": 42,
+      "mtime": 1774455374526.0374
+    },
+    {
+      "path": "AGENTS.md",
+      "title": "AGENTS.md",
+      "summary": "This repository is updated by coding agents during Aspose.Words release alignment work. When making changes, preserve the existing repository structure, conventions, and architectural patterns. Do ...",
+      "lines": 54,
+      "mtime": 1774452937912.2922
+    },
+    {
+      "path": "CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "All notable changes to this project will be documented in this file. The format is based on \"Keep a Changelog\", and versioning adheres to Semantic Versioning (SemVer). - Integration with Aspose.Wor...",
+      "lines": 31,
+      "mtime": 1774548523865.9878
+    },
+    {
+      "path": "README.md",
+      "title": "Aspose.Words MCP",
+      "summary": "![Python Version](https://img.shields.io/badge/python-3.11%2B-blue) ![License](https://img.shields.io/badge/license-MIT-green) **Aspose.Words MCP** is a FastMCP-based MCP server built on top of [As...",
+      "lines": 248,
+      "mtime": 1774537809100.4443
+    }
+  ]
+}

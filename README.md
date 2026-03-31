@@ -22,6 +22,8 @@
 - Export as Base64 (DOCX, PDF, etc.), advanced export options
 - Render page to image (PNG, etc.)
 - In-memory document management: copy, save as, list, delete, merge
+- AI summarization with `summarize_document` using the Aspose.Words 26.3 AI surface
+- Paragraph run normalization with `join_paragraph_runs` and optional run-merge controls
 
 ## Requirements
 
@@ -71,6 +73,7 @@ Supported MCP transports: `stdio`, `streamable-http`, `sse`.
 - `MCP_PATH` — HTTP path for `streamable-http` (default `/mcp`)
 - `MCP_SSE_PATH` — events path for `sse` (default `/sse`)
 - `LOG_LEVEL` — logging level (`INFO`, `DEBUG`, ...)
+- `API_KEY` — API key used by `summarize_document` (required only for AI summarization)
 
 ### Aspose.Words License
 
@@ -107,6 +110,7 @@ See full list and signatures in `mcp_server.py` (function `register_tools`) and 
 Main tool categories:
 
 - content/reading: create document, insert/delete/read text, headings, lists, HTML/Markdown
+- content/editing: formatting, paragraph run joining
 - layout: pages, breaks, columns, headers/footers, page numbering
 - tables: create and format tables
 - watermarks: watermarks
@@ -115,6 +119,106 @@ Main tool categories:
 - protection: protection and restrictions
 - comments/notes: comments, footnotes/endnotes
 - export/render: export, page rendering
+- AI: document summarization
+
+### Release-aligned capabilities (26.3)
+
+#### `summarize_document`
+
+Summarizes an existing document with the Aspose.Words 26.3 AI summarization surface and saves the summary as a DOCX file.
+
+- `doc_id` (`str`, required) — source document identifier.
+- `model_name` (`str`, required) — AI model name passed to Aspose.Words.
+- `summary_length` (`str`, optional, default `short`) — supported values: `very_short`, `short`, `medium`, `long`, `very_long`.
+- `output_name` (`str`, optional, default generated) — output DOCX filename. If omitted, the server creates `<source>.summary.<summary_length>.docx`.
+- `API_KEY` is **not** a tool argument. The server reads it from the `API_KEY` environment variable.
+
+Success example:
+
+```json
+{
+  "tool": "summarize_document",
+  "arguments": {
+    "doc_id": "proposal",
+    "model_name": "gpt-4.1-mini",
+    "summary_length": "medium",
+    "output_name": "proposal-summary"
+  }
+}
+```
+
+Example result:
+
+```json
+{
+  "sourceDocId": "proposal",
+  "sourcePath": ".../proposal.docx",
+  "outputFilename": "proposal-summary.docx",
+  "outputPath": ".../proposal-summary.docx",
+  "modelName": "gpt-4.1-mini",
+  "summaryLength": "medium"
+}
+```
+
+Error case:
+
+```text
+ValueError: API_KEY environment variable is required for summarize_document
+```
+
+#### `join_paragraph_runs`
+
+Joins adjacent runs with the same formatting in a selected paragraph using the Aspose.Words 26.3 run-merging surface.
+
+- `doc_id` (`str`, required) — document identifier.
+- `paragraph_index` (`int`, required) — zero-based paragraph index to normalize.
+- `ignore_redundant` (`bool`, optional, default omitted) — when provided, forwards `JoinRunsOptions.ignore_redundant`.
+- `ignore_insignificant` (`bool`, optional, default omitted) — when provided, forwards `JoinRunsOptions.ignore_insignificant`.
+- `ignore_spacing` (`bool`, optional, default omitted) — when provided, forwards `JoinRunsOptions.ignore_spacing`.
+
+Success example:
+
+```json
+{
+  "tool": "join_paragraph_runs",
+  "arguments": {
+    "doc_id": "proposal",
+    "paragraph_index": 2,
+    "ignore_redundant": true,
+    "ignore_insignificant": true,
+    "ignore_spacing": false
+  }
+}
+```
+
+Edge case example (all optional controls omitted):
+
+```json
+{
+  "tool": "join_paragraph_runs",
+  "arguments": {
+    "doc_id": "proposal",
+    "paragraph_index": 2
+  }
+}
+```
+
+Example result:
+
+```json
+{
+  "paragraph_index": 2,
+  "run_count_before": 5,
+  "run_count_after": 2,
+  "changed": true
+}
+```
+
+Out-of-range example:
+
+```text
+IndexError: paragraph_index out of range
+```
 
 ## Example Workflow via an MCP Client
 

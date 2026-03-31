@@ -22,7 +22,8 @@ def export_markdown(doc: Any) -> bytes:
     with _tmp.NamedTemporaryFile(suffix='.md', delete=True) as tf:
         tmp_path = Path(tf.name)
         doc.save(str(tmp_path), aw.SaveFormat.MARKDOWN)
-        return tmp_path.read_bytes()
+        markdown_bytes = tmp_path.read_bytes()
+    return markdown_bytes
 
 
 def build_pdf_opts(options: Dict[str, Any]) -> Any:

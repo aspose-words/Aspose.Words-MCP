@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import aspose.words as aw
 
@@ -371,6 +371,45 @@ def format_range(
             font.size = font_size
     doc.save(str(path))
     return True
+
+
+def join_paragraph_runs(
+    doc_id: str,
+    paragraph_index: int = 0,
+    ignore_redundant: Optional[bool] = None,
+    ignore_insignificant: Optional[bool] = None,
+    ignore_spacing: Optional[bool] = None,
+) -> Dict[str, int | bool]:
+    path = ensure_path(doc_id)
+    doc = aw.Document(str(path))
+    paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    if paragraph_index < 0 or paragraph_index >= paras.count:
+        raise IndexError('paragraph_index out of range')
+
+    paragraph = paras[paragraph_index].as_paragraph()
+    if paragraph is None:
+        raise ValueError('node at paragraph_index is not a paragraph')
+
+    run_count_before = paragraph.runs.count
+
+    options = aw.JoinRunsOptions()
+    if ignore_redundant is not None:
+        options.ignore_redundant = bool(ignore_redundant)
+    if ignore_insignificant is not None:
+        options.ignore_insignificant = bool(ignore_insignificant)
+    if ignore_spacing is not None:
+        options.ignore_spacing = bool(ignore_spacing)
+
+    paragraph.join_runs_with_same_formatting(options)
+    run_count_after = paragraph.runs.count
+
+    doc.save(str(path))
+    return {
+        'paragraph_index': int(paragraph_index),
+        'run_count_before': int(run_count_before),
+        'run_count_after': int(run_count_after),
+        'changed': run_count_before != run_count_after,
+    }
 
 
 def delete_paragraph(doc_id: str, paragraph_index: int = 0) -> bool:
