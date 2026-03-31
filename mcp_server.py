@@ -1656,11 +1656,11 @@ def register_tools() -> None:
 
 
 def run_server(
-    transport: str | None = None,
+    transport: Optional[str] = None,
     host: str = '0.0.0.0',
     port: int = 8080,
     path: str = '/mcp',
-    license_path: str | None = None,
+    license_path: Optional[str] = None,
 ):
     logger = _setup_logging()
     _ensure_data_dir_initialized()
