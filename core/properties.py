@@ -3,6 +3,7 @@ from typing import Dict, Optional
 import aspose.words as aw
 from core.utils.docs_util import ensure_path
 
+
 def properties_get(doc_id: str) -> Dict[str, Optional[str]]:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -14,7 +15,14 @@ def properties_get(doc_id: str) -> Dict[str, Optional[str]]:
         'keywords': str(props.keywords) if props.keywords is not None else None,
     }
 
-def properties_set(doc_id: str, title: Optional[str]=None, author: Optional[str]=None, subject: Optional[str]=None, keywords: Optional[str]=None) -> bool:
+
+def properties_set(
+    doc_id: str,
+    title: Optional[str] = None,
+    author: Optional[str] = None,
+    subject: Optional[str] = None,
+    keywords: Optional[str] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     props = doc.built_in_document_properties

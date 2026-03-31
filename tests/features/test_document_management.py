@@ -1,5 +1,6 @@
 import base64
 import pytest
+
 pytest.importorskip('aspose.words')
 import mcp_server as srv
 from core import content as _content
@@ -7,12 +8,14 @@ from core import io as _io
 from core import export as _export
 from core import reading as _reading
 
+
 def test_create_and_get_info():
     doc_id, name = _io.create_document('hello.docx')
     assert doc_id and name.endswith('.docx')
     info = _reading.get_info(doc_id)
     assert isinstance(info, dict)
     assert info['paragraphs'] >= 1
+
 
 def test_get_info_via_tool():
     res = srv.tool_create_document('info.docx')
@@ -25,6 +28,7 @@ def test_get_info_via_tool():
     assert info['words'] >= 2
     assert info['paragraphs'] >= 1
 
+
 def test_export_base64_tool_smoke():
     res = srv.tool_create_document('file.docx')
     doc_id = res['docId']
@@ -36,6 +40,7 @@ def test_export_base64_tool_smoke():
     data = base64.b64decode(out['base64'])
     assert isinstance(data, (bytes, bytearray)) and len(data) > 0
 
+
 @pytest.mark.parametrize('fmt,ext_prefix', [('docx', 'docx'), ('pdf', 'pdf'), ('rtf', 'rtf')])
 def test_export_multiple_formats_via_manager(fmt, ext_prefix):
     doc_id, _ = _io.create_document('a.docx')
@@ -44,6 +49,7 @@ def test_export_multiple_formats_via_manager(fmt, ext_prefix):
     assert isinstance(data, (bytes, bytearray)) and len(data) > 0
     assert isinstance(mime, str) and len(mime) > 0
     assert ext == ext_prefix
+
 
 def test_merge_documents_via_manager():
     a_id, _ = _io.create_document('a.docx')
@@ -55,11 +61,15 @@ def test_merge_documents_via_manager():
     data, _, _ = _export.export(merged_id, fmt='docx')
     assert len(data) > 0
 
+
 def test_merge_invalid_ids_raises():
     a_id, _ = _io.create_document('a.docx')
     with pytest.raises(FileNotFoundError):
         _io.merge([a_id, 'missing-id'])
+
+
 from core.utils import docs_util as _docs
+
 
 def test_list_copy_text_xml_save_delete_merge():
     r1 = srv.tool_create_document('a.docx')
@@ -88,6 +98,7 @@ def test_list_copy_text_xml_save_delete_merge():
     srv.tool_delete_document(id2)
     with pytest.raises(FileNotFoundError):
         _docs.ensure_path(id2)
+
 
 def test_properties_get_set():
     r = srv.tool_create_document('meta.docx')

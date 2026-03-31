@@ -2,6 +2,7 @@ import threading
 import time
 from core.store import DocumentStore
 
+
 def test_store_basic_crud():
     store = DocumentStore()
     store.clear()
@@ -19,6 +20,7 @@ def test_store_basic_crud():
     assert store.remove_document('missing') is False
     assert store.size() == 0
 
+
 def test_store_thread_safety_smoke():
     store = DocumentStore()
     store.clear()
@@ -27,6 +29,7 @@ def test_store_thread_safety_smoke():
         for i in range(50):
             store.add_document(f'{prefix}-{i}', f'{prefix}-{i}.docx')
             time.sleep(0.001)
+
     t1 = threading.Thread(target=worker, args=('A',))
     t2 = threading.Thread(target=worker, args=('B',))
     t1.start()
@@ -36,6 +39,7 @@ def test_store_thread_safety_smoke():
     assert store.size() >= 100
     assert store.document_exists('A-0')
     assert store.document_exists('B-0')
+
 
 def test_store_clear_overwrite_and_copy():
     store = DocumentStore()
@@ -50,17 +54,19 @@ def test_store_clear_overwrite_and_copy():
     store.clear()
     assert store.size() == 0
 
+
 def test_store_multithread_mixed_ops_smoke():
     store = DocumentStore()
     store.clear()
 
-    def writer(prefix: str, count: int=60):
+    def writer(prefix: str, count: int = 60):
         for i in range(count):
             store.add_document(f'{prefix}-{i}', f'{prefix}-{i}.docx')
 
-    def remover(prefix: str, count: int=30):
+    def remover(prefix: str, count: int = 30):
         for i in range(count):
             store.remove_document(f'{prefix}-{i}')
+
     t1 = threading.Thread(target=writer, args=('W', 80))
     t2 = threading.Thread(target=writer, args=('X', 80))
     t3 = threading.Thread(target=remover, args=('W', 40))

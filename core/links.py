@@ -13,6 +13,7 @@ def _move_builder_to_paragraph(doc_id: str, paragraph_index: int):
     builder.move_to_paragraph(paragraph_index, -1)
     return path, doc, builder
 
+
 def add_bookmark_at_paragraph(doc_id: str, name: str, paragraph_index: int) -> bool:
     path, doc, builder = _move_builder_to_paragraph(doc_id, paragraph_index)
     builder.start_bookmark(name)
@@ -20,7 +21,10 @@ def add_bookmark_at_paragraph(doc_id: str, name: str, paragraph_index: int) -> b
     doc.save(str(path))
     return True
 
-def insert_hyperlink_at_paragraph(doc_id: str, paragraph_index: int, text: str, target: str, external: bool=True) -> bool:
+
+def insert_hyperlink_at_paragraph(
+    doc_id: str, paragraph_index: int, text: str, target: str, external: bool = True
+) -> bool:
     path, doc, builder = _move_builder_to_paragraph(doc_id, paragraph_index)
     if external:
         builder.insert_hyperlink(text, target, True)

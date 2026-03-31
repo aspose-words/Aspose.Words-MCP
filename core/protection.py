@@ -4,21 +4,26 @@ import aspose.words as aw
 from . import content as _content
 from core.utils.docs_util import ensure_path
 
-def protect(doc_id: str, password: Optional[str]=None) -> str:
+
+def protect(doc_id: str, password: Optional[str] = None) -> str:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     doc.protect(aw.ProtectionType.READ_ONLY, password)
     doc.save(str(path))
     return 'ReadOnly'
 
-def unprotect(doc_id: str, password: Optional[str]=None) -> bool:
+
+def unprotect(doc_id: str, password: Optional[str] = None) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     doc.unprotect(password)
     doc.save(str(path))
     return True
 
-def protect_restrict(doc_id: str, password: Optional[str]=None, ranges: Optional[List[Dict[str, int]]]=None) -> str:
+
+def protect_restrict(
+    doc_id: str, password: Optional[str] = None, ranges: Optional[List[Dict[str, int]]] = None
+) -> str:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     if ranges:

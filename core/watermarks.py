@@ -4,7 +4,15 @@ from io import BytesIO
 import aspose.words as aw
 from core.utils.docs_util import ensure_path, hex_to_color
 
-def add_watermark_text(doc_id: str, text: str, font_name: Optional[str]=None, size: Optional[float]=None, color_hex: Optional[str]=None, diagonal: bool=True) -> bool:
+
+def add_watermark_text(
+    doc_id: str,
+    text: str,
+    font_name: Optional[str] = None,
+    size: Optional[float] = None,
+    color_hex: Optional[str] = None,
+    diagonal: bool = True,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     opts = aw.TextWatermarkOptions()
@@ -20,7 +28,10 @@ def add_watermark_text(doc_id: str, text: str, font_name: Optional[str]=None, si
     doc.save(str(path))
     return True
 
-def add_watermark_image(doc_id: str, image_bytes: bytes, scale: Optional[float]=None, washout: bool=True) -> bool:
+
+def add_watermark_image(
+    doc_id: str, image_bytes: bytes, scale: Optional[float] = None, washout: bool = True
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     with BytesIO(image_bytes) as stream:

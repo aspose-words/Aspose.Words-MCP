@@ -1,6 +1,8 @@
 import pytest
+
 pytest.importorskip('aspose.words')
 import mcp_server as srv
+
 
 def test_add_headings_and_get_outline():
     res = srv.tool_create_document('outline.docx')
@@ -19,6 +21,7 @@ def test_add_headings_and_get_outline():
     assert 1 in levels
     assert 2 in levels
 
+
 def test_read_paragraphs_and_add_paragraph_via_tools():
     res = srv.tool_create_document('content.docx')
     doc_id = res['docId']
@@ -33,6 +36,7 @@ def test_read_paragraphs_and_add_paragraph_via_tools():
     out2 = srv.tool_read_paragraphs(doc_id, start=0, end=max(1, len(paras) - 1))
     assert isinstance(out2['paragraphs'], list)
 
+
 def test_page_break_positions_via_manager():
     res = srv.tool_create_document('breaks.docx')
     doc_id = res['docId']
@@ -41,6 +45,7 @@ def test_page_break_positions_via_manager():
     srv.tool_add_page_break_at_paragraph(doc_id, paragraph_index=0)
     info = srv.tool_get_info(doc_id)
     assert info['paragraphs'] >= 1
+
 
 def test_add_page_break_via_tool():
     res = srv.tool_create_document('break-tool.docx')
@@ -52,21 +57,30 @@ def test_add_page_break_via_tool():
     out_after = srv.tool_read_paragraphs(doc_id)
     assert len(out_after['paragraphs']) >= len(out_before['paragraphs'])
 
+
 def _png_1x1_b64():
     return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8AABQMBgYJ4V7wAAAAASUVORK5CYII='
+
 
 def test_near_text_insertions_and_lists():
     res = srv.tool_create_document('near.docx')
     did = res['docId']
     srv.tool_add_paragraph(did, 'Hello')
-    srv.tool_insert_header_near_text(did, target_text='Hello', header_title='H1', position='after', level=1)
-    srv.tool_insert_line_or_paragraph_near_text(did, target_text='Hello', line_text='Line', position='after')
-    srv.tool_insert_numbered_list_near_text(did, target_text='Hello', list_items=['A', 'B'], position='after', bullet_type='number')
+    srv.tool_insert_header_near_text(
+        did, target_text='Hello', header_title='H1', position='after', level=1
+    )
+    srv.tool_insert_line_or_paragraph_near_text(
+        did, target_text='Hello', line_text='Line', position='after'
+    )
+    srv.tool_insert_numbered_list_near_text(
+        did, target_text='Hello', list_items=['A', 'B'], position='after', bullet_type='number'
+    )
     srv.tool_insert_list_end(did, items=['I1', 'I2'], kind='bullet')
     paras = srv.tool_read_paragraphs(did)['paragraphs']
     joined = '\n'.join(paras)
     for s in ('H1', 'Line', 'A', 'B', 'I1', 'I2'):
         assert s in joined
+
 
 def test_add_picture_table_and_text_formatting():
     res = srv.tool_create_document('media.docx')
@@ -84,6 +98,7 @@ def test_add_picture_table_and_text_formatting():
     srv.tool_format_text(did, paragraph_index=pidx, start_pos=0, end_pos=min(3, len(paras[pidx])))
     rep = srv.tool_replace_text(did, find_text='Hello', replace_text='Hi')
     assert isinstance(rep['count'], int)
+
 
 def test_insert_text_start_and_at_paragraph_and_delete():
     r = srv.tool_create_document('textpos.docx')
@@ -109,6 +124,7 @@ def test_insert_text_start_and_at_paragraph_and_delete():
     joined = '\n'.join(after)
     assert 'P0' not in joined
 
+
 def test_insert_lists_start_and_at_paragraph():
     r = srv.tool_create_document('lists.docx')
     did = r['docId']
@@ -118,11 +134,14 @@ def test_insert_lists_start_and_at_paragraph():
     paras = srv.tool_read_paragraphs(did)['paragraphs']
     assert any(('S1' in p for p in paras))
     target_idx = max(0, len(paras) - 1)
-    srv.tool_insert_list_at_paragraph(did, items=['E1', 'E2'], paragraph_index=target_idx, kind='number')
+    srv.tool_insert_list_at_paragraph(
+        did, items=['E1', 'E2'], paragraph_index=target_idx, kind='number'
+    )
     paras2 = srv.tool_read_paragraphs(did)['paragraphs']
     j = '\n'.join(paras2)
     for s in ('E1', 'E2'):
         assert s in j
+
 
 def test_add_picture_start_and_outline_simple_and_stats():
     r = srv.tool_create_document('startpic.docx')

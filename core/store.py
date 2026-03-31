@@ -1,10 +1,11 @@
 import logging
 from typing import Dict, Optional
 import threading
+
 logger = logging.getLogger(__name__)
 
-class DocumentStore:
 
+class DocumentStore:
     def __init__(self):
         self._store: Dict[str, Dict[str, str]] = {}
         self._lock = threading.RLock()
@@ -51,4 +52,6 @@ class DocumentStore:
     def size(self) -> int:
         with self._lock:
             return len(self._store)
+
+
 document_store = DocumentStore()

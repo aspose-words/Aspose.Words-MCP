@@ -1,7 +1,15 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
 import aspose.words as aw
-from core.utils.docs_util import ensure_path, get_paragraph_nodes, find_paragraph_indices_by_anchor, normalize_text_for_match, safe_count, hex_to_color
+from core.utils.docs_util import (
+    ensure_path,
+    get_paragraph_nodes,
+    find_paragraph_indices_by_anchor,
+    normalize_text_for_match,
+    safe_count,
+    hex_to_color,
+)
+
 
 def notes_add_footnote(doc_id: str, paragraph_index: int, text: str) -> bool:
     path = ensure_path(doc_id)
@@ -15,6 +23,7 @@ def notes_add_footnote(doc_id: str, paragraph_index: int, text: str) -> bool:
     doc.save(str(path))
     return True
 
+
 def notes_add_endnote(doc_id: str, paragraph_index: int, text: str) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -26,6 +35,7 @@ def notes_add_endnote(doc_id: str, paragraph_index: int, text: str) -> bool:
     builder.insert_footnote(aw.notes.FootnoteType.ENDNOTE, text)
     doc.save(str(path))
     return True
+
 
 def notes_convert_footnotes_to_endnotes(doc_id: str) -> bool:
     path = ensure_path(doc_id)
@@ -56,7 +66,15 @@ def notes_convert_footnotes_to_endnotes(doc_id: str) -> bool:
     doc.save(str(path))
     return True
 
-def notes_style(doc_id: str, font_name: Optional[str]=None, font_size: Optional[float]=None, bold: Optional[bool]=None, italic: Optional[bool]=None, color_hex: Optional[str]=None) -> bool:
+
+def notes_style(
+    doc_id: str,
+    font_name: Optional[str] = None,
+    font_size: Optional[float] = None,
+    bold: Optional[bool] = None,
+    italic: Optional[bool] = None,
+    color_hex: Optional[str] = None,
+) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     notes = doc.get_child_nodes(aw.NodeType.FOOTNOTE, True)
@@ -84,6 +102,7 @@ def notes_style(doc_id: str, font_name: Optional[str]=None, font_size: Optional[
     doc.save(str(path))
     return True
 
+
 def notes_list(doc_id: str) -> List[Dict[str, Any]]:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -107,12 +126,24 @@ def notes_list(doc_id: str) -> List[Dict[str, Any]]:
         out.append({'type': tname, 'paragraphIndex': int(pidx), 'text': txt})
     return out
 
-def notes_add_by_anchor(doc_id: str, note_type: str, anchor_text: str, text: str, position: str='after', occurrence: int=1, match_case: bool=False, whole_word: bool=False) -> bool:
+
+def notes_add_by_anchor(
+    doc_id: str,
+    note_type: str,
+    anchor_text: str,
+    text: str,
+    position: str = 'after',
+    occurrence: int = 1,
+    match_case: bool = False,
+    whole_word: bool = False,
+) -> bool:
     path = ensure_path(doc_id)
     if not anchor_text:
         raise ValueError('anchor_text must be non-empty')
     doc = aw.Document(str(path))
-    indices = find_paragraph_indices_by_anchor(doc, anchor_text, match_case=match_case, whole_word=whole_word)
+    indices = find_paragraph_indices_by_anchor(
+        doc, anchor_text, match_case=match_case, whole_word=whole_word
+    )
     if not indices:
         raise ValueError('Anchor text not found')
     idx = int(occurrence or 1) - 1
@@ -120,7 +151,11 @@ def notes_add_by_anchor(doc_id: str, note_type: str, anchor_text: str, text: str
         raise IndexError('occurrence out of range for anchor matches')
     pidx = indices[idx]
     builder = aw.DocumentBuilder(doc)
-    ntype = aw.notes.FootnoteType.FOOTNOTE if (note_type or '').lower() != 'endnote' else aw.notes.FootnoteType.ENDNOTE
+    ntype = (
+        aw.notes.FootnoteType.FOOTNOTE
+        if (note_type or '').lower() != 'endnote'
+        else aw.notes.FootnoteType.ENDNOTE
+    )
     if position == 'before':
         builder.move_to_paragraph(pidx, 0)
     else:
@@ -129,12 +164,23 @@ def notes_add_by_anchor(doc_id: str, note_type: str, anchor_text: str, text: str
     doc.save(str(path))
     return True
 
-def notes_delete_by_anchor(doc_id: str, note_type: str, anchor_text: str, match_case: bool=False, whole_word: bool=False, occurrence: Optional[int]=None, remove_all: bool=True) -> int:
+
+def notes_delete_by_anchor(
+    doc_id: str,
+    note_type: str,
+    anchor_text: str,
+    match_case: bool = False,
+    whole_word: bool = False,
+    occurrence: Optional[int] = None,
+    remove_all: bool = True,
+) -> int:
     path = ensure_path(doc_id)
     if not anchor_text:
         return 0
     doc = aw.Document(str(path))
-    indices = find_paragraph_indices_by_anchor(doc, anchor_text, match_case=match_case, whole_word=whole_word)
+    indices = find_paragraph_indices_by_anchor(
+        doc, anchor_text, match_case=match_case, whole_word=whole_word
+    )
     if not indices:
         return 0
     if occurrence is not None:
@@ -168,12 +214,22 @@ def notes_delete_by_anchor(doc_id: str, note_type: str, anchor_text: str, match_
     doc.save(str(path))
     return int(removed)
 
-def notes_validate_by_anchor(doc_id: str, note_type: str, anchor_text: str, min_count: int=1, match_case: bool=False, whole_word: bool=False) -> Dict[str, Any]:
+
+def notes_validate_by_anchor(
+    doc_id: str,
+    note_type: str,
+    anchor_text: str,
+    min_count: int = 1,
+    match_case: bool = False,
+    whole_word: bool = False,
+) -> Dict[str, Any]:
     path = ensure_path(doc_id)
     if not anchor_text:
         return {'ok': False, 'count': 0}
     doc = aw.Document(str(path))
-    indices = find_paragraph_indices_by_anchor(doc, anchor_text, match_case=match_case, whole_word=whole_word)
+    indices = find_paragraph_indices_by_anchor(
+        doc, anchor_text, match_case=match_case, whole_word=whole_word
+    )
     if not indices:
         return {'ok': False, 'count': 0}
     paras = get_paragraph_nodes(doc)
