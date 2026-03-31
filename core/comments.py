@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from typing import Dict, List, Optional
+
 import aspose.words as aw
+
 from core.utils.docs_util import docx_path, get_paragraph_nodes
 
 

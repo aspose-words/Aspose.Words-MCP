@@ -1,8 +1,12 @@
 from __future__ import annotations
+
 from typing import Dict, List, Optional
+
 import aspose.words as aw
-from . import content as _content
+
 from core.utils.docs_util import ensure_path
+
+from . import content as _content
 
 
 def protect(doc_id: str, password: Optional[str] = None) -> str:

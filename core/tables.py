@@ -1,7 +1,10 @@
 from __future__ import annotations
-from typing import Optional, List
+
+from typing import List, Optional
+
 import aspose.words as aw
-from core.utils.docs_util import ensure_path, move_builder, hex_to_color
+
+from core.utils.docs_util import ensure_path, hex_to_color, move_builder
 
 
 def add_table(

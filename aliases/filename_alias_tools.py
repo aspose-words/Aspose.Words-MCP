@@ -1,11 +1,12 @@
 import base64
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Callable
-from core import layout as _layout
+from typing import Any, Callable, Dict, List, Optional
+
 from core import content as _content
 from core import export as _export
-from core import properties as _properties
 from core import io as _io
+from core import layout as _layout
+from core import properties as _properties
 from core import reading as _reading
 
 

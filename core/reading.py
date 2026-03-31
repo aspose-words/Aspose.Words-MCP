@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Optional
 from io import BytesIO
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import aspose.words as aw
 
 
