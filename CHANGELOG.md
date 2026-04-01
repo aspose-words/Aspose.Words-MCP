@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [25.12.0] - 2026-04-01
+### Added
+- Exposed regex-aware replacement through the existing text replacement MCP surface.
+
+### Changed
+- Aligned server versioning with Aspose.Words 25.12.0.
+
 ## [25.11.0] - 2025-12-02
 ### Added
 - Initial version of the MCP server for Aspose.Words automation (based on FastMCP).

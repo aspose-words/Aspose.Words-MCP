@@ -14,6 +14,183 @@ from core.utils.docs_util import (
     resolve_outline_level,
 )
 
+_MAX_REGEX_PATTERN_LENGTH = 256
+_ALLOWED_REGEX_ESCAPES = {
+    'd',
+    'D',
+    's',
+    'S',
+    'w',
+    'W',
+    't',
+    'n',
+    'r',
+    '\\',
+    '.',
+    '^',
+    '$',
+    '|',
+    '-',
+    '[',
+    ']',
+    '{',
+    '}',
+    '(',
+    ')',
+    '*',
+    '+',
+    '?',
+}
+
+
+def validate_regex_pattern(pattern: str) -> None:
+    if pattern == '':
+        raise ValueError('search text must be a non-empty string')
+    if len(pattern) > _MAX_REGEX_PATTERN_LENGTH:
+        raise ValueError(
+            f'regex pattern is too long; maximum length is {_MAX_REGEX_PATTERN_LENGTH} characters'
+        )
+
+    _reject_lookaround_and_group_operators(pattern)
+    _reject_backreferences(pattern)
+    _validate_allowed_subset(pattern)
+    _reject_stacked_quantifiers(pattern)
+
+
+def _reject_lookaround_and_group_operators(pattern: str) -> None:
+    escaped = False
+    for index, char in enumerate(pattern):
+        if escaped:
+            escaped = False
+            continue
+        if char == '\\':
+            escaped = True
+            continue
+        if char == '(':
+            if index + 1 < len(pattern) and pattern[index + 1] == '?':
+                raise ValueError('regex lookarounds and inline group operators are not allowed')
+            raise ValueError('regex groups are not allowed in public regex mode')
+
+
+def _reject_backreferences(pattern: str) -> None:
+    escaped = False
+    for index, char in enumerate(pattern):
+        if escaped:
+            if char.isdigit():
+                raise ValueError('regex backreferences are not allowed in public regex mode')
+            escaped = False
+            continue
+        if char == '\\':
+            escaped = True
+            continue
+        if char == '$' and index + 1 < len(pattern) and pattern[index + 1].isdigit():
+            raise ValueError('regex backreferences are not allowed in public regex mode')
+
+
+def _validate_allowed_subset(pattern: str) -> None:
+    in_char_class = False
+    escaped = False
+    for char in pattern:
+        if escaped:
+            if not _is_allowed_escape(char):
+                raise ValueError(f'regex escape sequence \\{char} is not allowed')
+            escaped = False
+            continue
+
+        if char == '\\':
+            escaped = True
+            continue
+
+        if char == '[':
+            in_char_class = True
+            continue
+        if char == ']':
+            in_char_class = False
+            continue
+
+        if in_char_class:
+            continue
+
+        if not _is_allowed_regex_char(char):
+            raise ValueError(f'regex token {char!r} is not allowed in public regex mode')
+
+    if escaped:
+        raise ValueError('regex pattern cannot end with a dangling escape')
+    if in_char_class:
+        raise ValueError('regex character class is not closed')
+
+
+def _is_allowed_escape(char: str) -> bool:
+    return char in _ALLOWED_REGEX_ESCAPES
+
+
+def _is_allowed_regex_char(char: str) -> bool:
+    return char.isalnum() or char.isspace() or char in '._^$|*+?{}[]-,'
+
+
+def _reject_stacked_quantifiers(pattern: str) -> None:
+    in_char_class = False
+    escaped = False
+    previous_was_quantifier = False
+    index = 0
+    while index < len(pattern):
+        char = pattern[index]
+
+        if escaped:
+            escaped = False
+            previous_was_quantifier = False
+            index += 1
+            continue
+        if char == '\\':
+            escaped = True
+            index += 1
+            continue
+
+        if char == '[':
+            in_char_class = True
+            previous_was_quantifier = False
+            index += 1
+            continue
+        if char == ']':
+            in_char_class = False
+            previous_was_quantifier = False
+            index += 1
+            continue
+
+        if in_char_class:
+            index += 1
+            continue
+
+        if char in '*+?':
+            if previous_was_quantifier:
+                raise ValueError('nested or stacked regex quantifiers are not allowed')
+            previous_was_quantifier = True
+            index += 1
+            continue
+
+        if char == '{':
+            closing_index = pattern.find('}', index + 1)
+            if closing_index == -1:
+                raise ValueError('regex quantifier is not closed')
+            quantifier_body = pattern[index + 1 : closing_index]
+            if not quantifier_body or not _is_valid_quantifier_body(quantifier_body):
+                raise ValueError('regex quantifier must use only digits and comma')
+            if previous_was_quantifier:
+                raise ValueError('nested or stacked regex quantifiers are not allowed')
+            previous_was_quantifier = True
+            index = closing_index + 1
+            continue
+
+        previous_was_quantifier = False
+        index += 1
+
+
+def _is_valid_quantifier_body(body: str) -> bool:
+    for char in body:
+        if not (char.isdigit() or char == ','):
+            return False
+    return True
+
 
 def find_heading_style_by_name(doc: aw.Document, level: int):
     lvl = level
@@ -68,9 +245,23 @@ def replace_text(
     case_sensitive: bool = False,
     whole_word: bool = False,
     use_regex: bool = False,
+    search_text: Optional[str] = None,
+    replacement_text: Optional[str] = None,
 ) -> int:
     file_path = ensure_path(doc_id)
     doc = aw.Document(str(file_path))
+
+    if search_text is not None and search != '':
+        raise ValueError('Provide either "search" or "search_text", not both')
+    if replacement_text is not None and replace != '':
+        raise ValueError('Provide either "replace" or "replacement_text", not both')
+
+    resolved_search = search_text if search_text is not None else search
+    resolved_replace = replacement_text if replacement_text is not None else replace
+
+    if resolved_search == '':
+        raise ValueError('search text must be a non-empty string')
+
     options = aw.replacing.FindReplaceOptions()
     options.match_case = bool(case_sensitive)
     options.direction = aw.replacing.FindReplaceDirection.FORWARD
@@ -79,13 +270,10 @@ def replace_text(
         options.max_matches = 1
 
     if use_regex:
-        import re
-
-        flags = 0 if case_sensitive else re.IGNORECASE
-        pattern = re.compile(search, flags)
-        count = doc.range.replace(pattern, replace, options)
+        validate_regex_pattern(resolved_search)
+        count = doc.range.replace_regex(resolved_search, resolved_replace, options)
     else:
-        count = doc.range.replace(search, replace, options)
+        count = doc.range.replace(resolved_search, resolved_replace, options)
     doc.save(str(file_path))
     return int(count)
 

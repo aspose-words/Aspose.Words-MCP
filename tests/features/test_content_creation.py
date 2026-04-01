@@ -65,6 +65,12 @@ def _png_1x1_b64():
     )
 
 
+def _doc_with_text(name: str, text: str) -> str:
+    doc_id = srv.tool_create_document(name)['docId']
+    srv.tool_insert_text_end(doc_id, text)
+    return doc_id
+
+
 def test_near_text_insertions_and_lists():
     res = srv.tool_create_document('near.docx')
     did = res['docId']
@@ -101,6 +107,30 @@ def test_add_picture_table_and_text_formatting():
     srv.tool_format_text(did, paragraph_index=pidx, start_pos=0, end_pos=min(3, len(paras[pidx])))
     rep = srv.tool_replace_text(did, find_text='Hello', replace_text='Hi')
     assert isinstance(rep['count'], int)
+
+
+def test_replace_text_regex_plain_literal_and_zero_match_behavior():
+    doc_id = _doc_with_text('replace-surface.docx', 'token cat cot cut')
+
+    plain = srv.tool_replace_text(doc_id, find_text='token', replace_text='_', use_regex=False)
+    assert plain['count'] == 1
+    plain_text = srv.tool_get_text(doc_id)['text']
+    assert 'token' not in plain_text
+    assert '_' in plain_text
+
+    regex = srv.tool_replace_text(
+        doc_id,
+        search_text='c.t',
+        replacement_text='dog',
+        use_regex=True,
+    )
+    assert regex['count'] == 3
+
+    before = srv.tool_get_text(doc_id)['text']
+    zero = srv.tool_replace_text(doc_id, find_text='zzz', replace_text='x')
+    after = srv.tool_get_text(doc_id)['text']
+    assert zero['count'] == 0
+    assert after == before
 
 
 def test_insert_text_start_and_at_paragraph_and_delete():
