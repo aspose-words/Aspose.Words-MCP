@@ -160,19 +160,73 @@ def tool_get_outline(doc_id: str):
 
 def tool_replace_text(
     doc_id: str,
-    find_text: str,
-    replace_text: str,
+    find_text: Optional[str] = None,
+    replace_text: Optional[str] = None,
     replace_all: bool = True,
     case_sensitive: bool = False,
+    whole_word: bool = False,
+    use_regex: bool = False,
+    search_text: Optional[str] = None,
+    replacement_text: Optional[str] = None,
 ):
+    has_find_text = find_text is not None
+    has_search_text = search_text is not None
+    if has_find_text == has_search_text:
+        raise ValueError(
+            'Provide exactly one search term alias: either "find_text" or "search_text".'
+        )
+
+    has_replace_text = replace_text is not None
+    has_replacement_text = replacement_text is not None
+    if has_replace_text == has_replacement_text:
+        raise ValueError(
+            'Provide exactly one replacement term alias: '
+            'either "replace_text" or "replacement_text".'
+        )
+
+    resolved_search_text = search_text if has_search_text else find_text
+    resolved_replacement_text = replacement_text if has_replacement_text else replace_text
+    if resolved_search_text is None or resolved_search_text == '':
+        raise ValueError('search text must be a non-empty string')
+    if resolved_replacement_text is None:
+        raise ValueError('replacement text alias must be provided')
+    if use_regex:
+        _content.validate_regex_pattern(resolved_search_text)
+
     count = _content.replace_text(
         doc_id=doc_id,
-        search=find_text,
-        replace=replace_text,
+        search_text=resolved_search_text,
+        replacement_text=resolved_replacement_text,
         replace_all=replace_all,
         case_sensitive=case_sensitive,
+        whole_word=whole_word,
+        use_regex=use_regex,
     )
     return {'count': int(count)}
+
+
+def _replace_text_wrapper(
+    doc_id: str,
+    find_text: Optional[str] = None,
+    replace_text: Optional[str] = None,
+    search_text: Optional[str] = None,
+    replacement_text: Optional[str] = None,
+    replace_all: bool = True,
+    case_sensitive: bool = False,
+    whole_word: bool = False,
+    use_regex: bool = False,
+):
+    return tool_replace_text(
+        doc_id=doc_id,
+        find_text=find_text,
+        replace_text=replace_text,
+        search_text=search_text,
+        replacement_text=replacement_text,
+        replace_all=replace_all,
+        case_sensitive=case_sensitive,
+        whole_word=whole_word,
+        use_regex=use_regex,
+    )
 
 
 def tool_find_text(doc_id: str, text: str, match_case: bool = False, whole_word: bool = False):
@@ -1022,21 +1076,11 @@ def register_tools() -> None:
     def get_outline(doc_id: str):
         return tool_get_outline(doc_id)
 
-    @mcp.tool(description='Replace text in the document with case/scope options')
-    def replace_text(
-        doc_id: str,
-        search_text: str,
-        replacement_text: str,
-        replace_all: bool = True,
-        case_sensitive: bool = False,
-    ):
-        return tool_replace_text(
-            doc_id,
-            search_text,
-            replacement_text,
-            replace_all=replace_all,
-            case_sensitive=case_sensitive,
-        )
+    replace_text_wrapper = _replace_text_wrapper
+    replace_text_wrapper.__name__ = 'replace_text'
+    mcp.tool(description='Replace text in the document with case/scope and regex options')(
+        replace_text_wrapper
+    )
 
     @mcp.tool(description='Find text occurrences in the document')
     def find_text(doc_id: str, text: str, match_case: bool = False, whole_word: bool = False):

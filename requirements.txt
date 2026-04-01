@@ -1,4 +1,4 @@
 fastmcp
-aspose-words==25.11.0
+aspose-words==25.12.0
 pytest
 ruff>=0.11.0

@@ -94,12 +94,44 @@ def test_replace_text(mcp_client_config, result_file_path):
         async with _client_session(mcp_client_config) as client:
             doc_id = await _create_document_and_get_id(client)
             await client.call_tool(
-                name='insert_text_end', arguments={'doc_id': doc_id, 'text': 'Hello World'}
+                name='insert_text_end',
+                arguments={'doc_id': doc_id, 'text': 'a.b Item-10 Item-22 Item-X'},
             )
-            await client.call_tool(
+
+            plain = await client.call_tool(
                 name='replace_text',
-                arguments={'doc_id': doc_id, 'search_text': 'World', 'replacement_text': 'MCP'},
+                arguments={
+                    'doc_id': doc_id,
+                    'find_text': 'Item-X',
+                    'replace_text': 'Item-Y',
+                    'use_regex': False,
+                },
             )
+            assert hasattr(plain, 'data')
+            assert isinstance(plain.data, dict)
+            assert plain.data['count'] == 1
+
+            regex = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': doc_id,
+                    'search_text': r'Item-\d+',
+                    'replacement_text': 'Matched',
+                    'use_regex': True,
+                },
+            )
+            assert hasattr(regex, 'data')
+            assert isinstance(regex.data, dict)
+            assert regex.data['count'] == 2
+
+            zero = await client.call_tool(
+                name='replace_text',
+                arguments={'doc_id': doc_id, 'find_text': 'zzz', 'replace_text': 'noop'},
+            )
+            assert hasattr(zero, 'data')
+            assert isinstance(zero.data, dict)
+            assert zero.data['count'] == 0
+
             await _save_exported_to_file(result_file_path, client, doc_id)
 
     _run_and_assert_file(result_file_path, run_client)

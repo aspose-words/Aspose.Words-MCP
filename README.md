@@ -4,11 +4,12 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
-**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. Supported transports: `stdio`, `streamable-http`, `sse`.
+**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `25.12.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
 
 ## Features
 
 - Create documents; read/write text, headings, and paragraphs
+- Text replacement with `replace_text`: plain replacement and constrained regex replacement
 - Text formatting (font, size, style, color, underline)
 - Page and section breaks; page setup (margins, orientation, paper size, columns)
 - Lists (bulleted/numbered)
