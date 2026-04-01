@@ -1,7 +1,10 @@
 import pytest
 
 pytest.importorskip('aspose.words')
+import aspose.words as aw
+
 import mcp_server as srv
+from core.utils import docs_util as _docs
 
 
 def test_table_formatting_suite():
@@ -54,3 +57,55 @@ def test_add_table_start_and_at_paragraph_and_merge_cells():
     )
     paras2 = srv.tool_read_paragraphs(did)['paragraphs']
     assert isinstance(paras2, list) and len(paras2) >= 1
+
+
+def _assert_row_border_members(row_borders, expected_line_style, expected_line_width):
+    border_members = (
+        row_borders.left,
+        row_borders.right,
+        row_borders.top,
+        row_borders.bottom,
+        row_borders.horizontal,
+        row_borders.vertical,
+    )
+    for border_member in border_members:
+        assert border_member.line_style == expected_line_style
+        assert border_member.line_width == expected_line_width
+
+
+def test_format_table_sets_all_explicit_border_members_for_each_row():
+    created_document = srv.tool_create_document('tbl-borders-single.docx')
+    doc_id = created_document['docId']
+    added_table = srv.tool_add_table_end(
+        doc_id, 3, 3, data=[['a', 'b', 'c'], ['d', 'e', 'f'], ['g', 'h', 'i']]
+    )
+    table_index = added_table['tableIndex']
+
+    srv.tool_format_table(doc_id, table_index, border_style='single')
+
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    table_nodes = document.get_child_nodes(aw.NodeType.TABLE, True)
+    table_obj = table_nodes[table_index].as_table()
+
+    for row_position in range(table_obj.rows.count):
+        row_borders = table_obj.rows[row_position].row_format.borders
+        _assert_row_border_members(row_borders, aw.LineStyle.SINGLE, 1.0)
+
+
+def test_format_table_sets_solid_alias_for_all_explicit_border_members():
+    created_document = srv.tool_create_document('tbl-borders-solid.docx')
+    doc_id = created_document['docId']
+    added_table = srv.tool_add_table_end(doc_id, 2, 2, data=[['h1', 'h2'], ['v1', 'v2']])
+    table_index = added_table['tableIndex']
+
+    srv.tool_format_table(doc_id, table_index, border_style='solid')
+
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    table_nodes = document.get_child_nodes(aw.NodeType.TABLE, True)
+    table_obj = table_nodes[table_index].as_table()
+
+    for row_position in range(table_obj.rows.count):
+        row_borders = table_obj.rows[row_position].row_format.borders
+        _assert_row_border_members(row_borders, aw.LineStyle.SINGLE, 1.0)

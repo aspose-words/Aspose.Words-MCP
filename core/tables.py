@@ -281,10 +281,18 @@ def table_set_borders(
         ls = aw.LineStyle.SINGLE
     for r in range(table_obj.rows.count):
         bc = table_obj.rows[r].row_format.borders
-        for s in ('left', 'right', 'top', 'bottom', 'horizontal', 'vertical'):
-            b = getattr(bc, s)
-            b.line_style = ls
-            b.line_width = lw
+        bc.left.line_style = ls
+        bc.left.line_width = lw
+        bc.right.line_style = ls
+        bc.right.line_width = lw
+        bc.top.line_style = ls
+        bc.top.line_width = lw
+        bc.bottom.line_style = ls
+        bc.bottom.line_width = lw
+        bc.horizontal.line_style = ls
+        bc.horizontal.line_width = lw
+        bc.vertical.line_style = ls
+        bc.vertical.line_width = lw
     doc.save(str(path))
     return True
 

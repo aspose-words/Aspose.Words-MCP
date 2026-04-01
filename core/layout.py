@@ -6,6 +6,23 @@ import aspose.words as aw
 
 from core.utils.docs_util import ensure_path
 
+_PAPER_SIZE_ALLOWLIST = {
+    'A3': aw.PaperSize.A3,
+    'A4': aw.PaperSize.A4,
+    'A5': aw.PaperSize.A5,
+    'LEGAL': aw.PaperSize.LEGAL,
+    'LETTER': aw.PaperSize.LETTER,
+}
+
+
+def _resolve_paper_size(paper: str) -> aw.PaperSize:
+    paper_key = str(paper).strip().upper()
+    paper_size = _PAPER_SIZE_ALLOWLIST.get(paper_key)
+    if paper_size is None:
+        supported = ', '.join(sorted(_PAPER_SIZE_ALLOWLIST.keys()))
+        raise ValueError(f"Unsupported paper size '{paper}'. Supported values: {supported}")
+    return paper_size
+
 
 def header_add_text(doc_id: str, text: str, primary: bool = True) -> bool:
     path = ensure_path(doc_id)
@@ -86,8 +103,8 @@ def set_page_setup(
             ps.orientation = (
                 aw.Orientation.LANDSCAPE if o.startswith('land') else aw.Orientation.PORTRAIT
             )
-        if paper:
-            ps.paper_size = getattr(aw.PaperSize, str(paper).upper())
+        if paper is not None:
+            ps.paper_size = _resolve_paper_size(paper)
         if columns is not None:
             ps.text_columns.set_count(int(columns))
     doc.save(str(file_path))
