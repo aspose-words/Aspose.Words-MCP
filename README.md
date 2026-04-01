@@ -35,6 +35,8 @@ You'll need to obtain a valid license for Aspose.Words. The package will install
 pip install aspose-words-mcp
 ```
 
+Current package releases are aligned to the matching Aspose.Words release line; this update targets Aspose.Words 25.12.0.
+
 From source (download repo and install requirements):
 
 ```bash
@@ -114,7 +116,9 @@ Main tool categories:
 - properties: document properties
 - protection: protection and restrictions
 - comments/notes: comments, footnotes/endnotes
-- export/render: export, page rendering
+- export/render: export, page rendering, regex-to-images export
+
+Text replacement supports both literal and regex workflows through `replace_text`. Keep `use_regex=false` for literal matching, or set `use_regex=true` and optionally `whole_word=true` to use the Aspose.Words 25.12.0 regex replacement path.
 
 ## Example Workflow via an MCP Client
 
@@ -126,6 +130,51 @@ Sequence of tool calls (names match the server):
 4. `add_table_end` or `add_table_at_paragraph`
 5. `add_watermark_text` or `add_watermark_image_base64`
 6. `export_base64` (e.g., `fmt="pdf"`) — get file as Base64
+
+Regex examples:
+
+```json
+{
+  "name": "replace_text",
+  "arguments": {
+    "doc_id": "<doc_id>",
+    "search_text": "Item-\\d+",
+    "replacement_text": "Updated",
+    "use_regex": true,
+    "whole_word": false,
+    "case_sensitive": true
+  }
+}
+```
+
+```json
+{
+  "name": "replace_regex_to_images_base64",
+  "arguments": {
+    "doc_id": "<doc_id>",
+    "pattern": "Item-\\d+",
+    "replacement_text": "Updated",
+    "fmt": "png",
+    "dpi": 120
+  }
+}
+```
+
+Edge case:
+
+```json
+{
+  "name": "replace_regex_to_images_base64",
+  "arguments": {
+    "doc_id": "<doc_id>",
+    "pattern": "Item-\\d+",
+    "replacement_text": "Updated",
+    "fmt": "svg"
+  }
+}
+```
+
+For this regex-to-images workflow, supported output formats are `png`, `jpeg`, and `tiff`; `svg` returns `Unsupported replace-to-images format: svg`.
 
 ## Integration with MCP Clients
 

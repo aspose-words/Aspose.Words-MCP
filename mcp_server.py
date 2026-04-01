@@ -164,6 +164,8 @@ def tool_replace_text(
     replace_text: str,
     replace_all: bool = True,
     case_sensitive: bool = False,
+    use_regex: bool = False,
+    whole_word: bool = False,
 ):
     count = _content.replace_text(
         doc_id=doc_id,
@@ -171,6 +173,8 @@ def tool_replace_text(
         replace=replace_text,
         replace_all=replace_all,
         case_sensitive=case_sensitive,
+        use_regex=use_regex,
+        whole_word=whole_word,
     )
     return {'count': int(count)}
 
@@ -486,6 +490,24 @@ def tool_render_page_base64(doc_id: str, page_index: int = 0, fmt: str = 'png', 
     data, mime, ext = _export.render_page(doc_id, page_index=page_index, fmt=fmt, dpi=dpi)
     b64 = base64.b64encode(data).decode('utf-8')
     return {'base64': b64, 'mime': mime, 'ext': ext}
+
+
+def tool_replace_regex_to_images_base64(
+    doc_id: str,
+    pattern: str,
+    replacement_text: str,
+    fmt: str = 'png',
+    dpi: int = 150,
+    case_sensitive: bool = False,
+):
+    return _export.replace_regex_to_images_base64(
+        doc_id=doc_id,
+        pattern=pattern,
+        replacement_text=replacement_text,
+        fmt=fmt,
+        dpi=dpi,
+        case_sensitive=case_sensitive,
+    )
 
 
 def tool_export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):
@@ -1029,6 +1051,8 @@ def register_tools() -> None:
         replacement_text: str,
         replace_all: bool = True,
         case_sensitive: bool = False,
+        use_regex: bool = False,
+        whole_word: bool = False,
     ):
         return tool_replace_text(
             doc_id,
@@ -1036,6 +1060,8 @@ def register_tools() -> None:
             replacement_text,
             replace_all=replace_all,
             case_sensitive=case_sensitive,
+            use_regex=use_regex,
+            whole_word=whole_word,
         )
 
     @mcp.tool(description='Find text occurrences in the document')
@@ -1647,6 +1673,24 @@ def register_tools() -> None:
     @mcp.tool(description='Render a document page to an image/base64')
     def render_page_base64(doc_id: str, page_index: int = 0, fmt: str = 'png', dpi: int = 150):
         return tool_render_page_base64(doc_id, page_index=page_index, fmt=fmt, dpi=dpi)
+
+    @mcp.tool(description='Replace regex matches and return resulting images as base64')
+    def replace_regex_to_images_base64(
+        doc_id: str,
+        pattern: str,
+        replacement_text: str,
+        fmt: str = 'png',
+        dpi: int = 150,
+        case_sensitive: bool = False,
+    ):
+        return tool_replace_regex_to_images_base64(
+            doc_id=doc_id,
+            pattern=pattern,
+            replacement_text=replacement_text,
+            fmt=fmt,
+            dpi=dpi,
+            case_sensitive=case_sensitive,
+        )
 
     @mcp.tool(description='Advanced export with additional format options')
     def export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):

@@ -1,7 +1,10 @@
+import re
+
 import pytest
 
 pytest.importorskip('aspose.words')
 import mcp_server as srv
+from core import content as _content
 
 
 def test_add_headings_and_get_outline():
@@ -160,3 +163,186 @@ def test_add_picture_start_and_outline_simple_and_stats():
     assert isinstance(st, dict)
     for k in ('words', 'paragraphs', 'pages'):
         assert k in st and isinstance(st[k], int)
+
+
+def test_replace_text_regex_unicode_via_content_manager():
+    res = srv.tool_create_document('regex-unicode.docx')
+    doc_id = res['docId']
+    srv.tool_add_paragraph(doc_id, 'ключ-001 ключ-002')
+
+    count = _content.replace_text(
+        doc_id=doc_id,
+        search=r'ключ-\d+',
+        replace='токен',
+        replace_all=True,
+        case_sensitive=True,
+        whole_word=False,
+        use_regex=True,
+    )
+
+    text = '\n'.join(srv.tool_read_paragraphs(doc_id)['paragraphs'])
+    assert count >= 2
+    assert 'ключ-001' not in text
+    assert 'ключ-002' not in text
+    assert 'токен' in text
+
+
+def test_replace_text_regex_invalid_pattern_propagates_error():
+    res = srv.tool_create_document('regex-invalid.docx')
+    doc_id = res['docId']
+    srv.tool_add_paragraph(doc_id, 'sample text')
+
+    with pytest.raises(RuntimeError):
+        _content.replace_text(
+            doc_id=doc_id,
+            search='([a',
+            replace='x',
+            use_regex=True,
+        )
+
+
+def test_replace_text_literal_compatibility_with_meta_characters():
+    res = srv.tool_create_document('literal-compat.docx')
+    doc_id = res['docId']
+    srv.tool_add_paragraph(doc_id, 'a.c a-c a*c')
+
+    count = _content.replace_text(
+        doc_id=doc_id,
+        search='a.c',
+        replace='X',
+        replace_all=True,
+        case_sensitive=True,
+        whole_word=False,
+        use_regex=False,
+    )
+
+    text = '\n'.join(srv.tool_read_paragraphs(doc_id)['paragraphs'])
+    assert count == 1
+    assert 'X' in text
+    assert 'a-c' in text
+    assert 'a*c' in text
+
+
+def test_replace_text_regex_replace_all_false_limits_to_first_match():
+    res = srv.tool_create_document('regex-replace-one.docx')
+    doc_id = res['docId']
+    srv.tool_add_paragraph(doc_id, 'id-1 id-2 id-3')
+
+    count = _content.replace_text(
+        doc_id=doc_id,
+        search=r'id-\d',
+        replace='X',
+        replace_all=False,
+        case_sensitive=True,
+        whole_word=False,
+        use_regex=True,
+    )
+
+    text = '\n'.join(srv.tool_read_paragraphs(doc_id)['paragraphs'])
+    assert count == 1
+    assert text.count('X') == 1
+    assert len(re.findall(r'id-\d', text)) == 2
+
+
+def test_replace_text_regex_case_sensitive_boundary_behavior():
+    res = srv.tool_create_document('regex-case-sensitive.docx')
+    doc_id = res['docId']
+    srv.tool_add_paragraph(doc_id, 'Token token TOKEN')
+
+    count_sensitive = _content.replace_text(
+        doc_id=doc_id,
+        search='token',
+        replace='X',
+        replace_all=True,
+        case_sensitive=True,
+        whole_word=True,
+        use_regex=True,
+    )
+
+    text_sensitive = '\n'.join(srv.tool_read_paragraphs(doc_id)['paragraphs'])
+    assert count_sensitive == 1
+    assert text_sensitive.count('X') == 1
+    assert 'Token' in text_sensitive
+    assert 'TOKEN' in text_sensitive
+
+
+def test_replace_text_regex_whole_word_monotonicity_against_substrings():
+    res_whole = srv.tool_create_document('regex-whole-word-true.docx')
+    did_whole = res_whole['docId']
+    source = 'cat scatter bobcat cat'
+    srv.tool_add_paragraph(did_whole, source)
+
+    count_whole = _content.replace_text(
+        doc_id=did_whole,
+        search='cat',
+        replace='DOG',
+        replace_all=True,
+        case_sensitive=True,
+        whole_word=True,
+        use_regex=True,
+    )
+    text_whole = '\n'.join(srv.tool_read_paragraphs(did_whole)['paragraphs'])
+
+    res_nonwhole = srv.tool_create_document('regex-whole-word-false.docx')
+    did_nonwhole = res_nonwhole['docId']
+    srv.tool_add_paragraph(did_nonwhole, source)
+
+    count_nonwhole = _content.replace_text(
+        doc_id=did_nonwhole,
+        search='cat',
+        replace='DOG',
+        replace_all=True,
+        case_sensitive=True,
+        whole_word=False,
+        use_regex=True,
+    )
+    text_nonwhole = '\n'.join(srv.tool_read_paragraphs(did_nonwhole)['paragraphs'])
+
+    assert count_whole == 2
+    assert count_nonwhole == 4
+    assert count_whole <= count_nonwhole
+    assert 'scatter' in text_whole
+    assert 'sDOGter' in text_nonwhole
+
+
+def test_replace_text_regex_oversized_unicode_input_replaces_all_matches():
+    res = srv.tool_create_document('regex-unicode-oversized.docx')
+    doc_id = res['docId']
+    token_count = 1200
+    payload = ' '.join(f'ключ-{i:05d}' for i in range(token_count))
+    assert len(payload) > 10000
+    srv.tool_add_paragraph(doc_id, payload)
+
+    count = _content.replace_text(
+        doc_id=doc_id,
+        search=r'ключ-\d{5}',
+        replace='токен',
+        replace_all=True,
+        case_sensitive=True,
+        whole_word=False,
+        use_regex=True,
+    )
+
+    text = '\n'.join(srv.tool_read_paragraphs(doc_id)['paragraphs'])
+    assert count == token_count
+    assert text.count('токен') == token_count
+    assert 'ключ-' not in text
+
+
+def test_replace_text_regex_invalid_pattern_does_not_mutate_document():
+    res = srv.tool_create_document('regex-invalid-no-mutation.docx')
+    doc_id = res['docId']
+    original = 'alpha beta alpha'
+    srv.tool_add_paragraph(doc_id, original)
+
+    with pytest.raises(RuntimeError):
+        _content.replace_text(
+            doc_id=doc_id,
+            search='([a',
+            replace='X',
+            use_regex=True,
+        )
+
+    text = '\n'.join(srv.tool_read_paragraphs(doc_id)['paragraphs'])
+    assert 'alpha beta alpha' in text
+    assert 'X' not in text

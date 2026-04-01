@@ -75,18 +75,39 @@ def replace_text(
     options.match_case = bool(case_sensitive)
     options.direction = aw.replacing.FindReplaceDirection.FORWARD
     options.find_whole_words_only = bool(whole_word)
-    if not replace_all:
-        options.max_matches = 1
 
     if use_regex:
-        import re
 
-        flags = 0 if case_sensitive else re.IGNORECASE
-        pattern = re.compile(search, flags)
-        count = doc.range.replace(pattern, replace, options)
+        class RegexReplacementCallback(aw.replacing.IReplacingCallback):
+            def __init__(self, should_replace_all: bool):
+                self.should_replace_all = should_replace_all
+                self.replaced_count = 0
+
+            def replacing(self, args: aw.replacing.ReplacingArgs) -> int:
+                if self.should_replace_all or self.replaced_count == 0:
+                    self.replaced_count += 1
+                    return aw.replacing.ReplaceAction.REPLACE
+                return aw.replacing.ReplaceAction.STOP
+
+        callback = RegexReplacementCallback(bool(replace_all))
+        pattern = search if case_sensitive else f'(?i){search}'
+        context = aw.lowcode.ReplacerContext()
+        context.find_replace_options.match_case = bool(case_sensitive)
+        context.find_replace_options.direction = aw.replacing.FindReplaceDirection.FORWARD
+        context.find_replace_options.find_whole_words_only = bool(whole_word)
+        context.find_replace_options.replacing_callback = callback
+        context.set_replacement_regex(pattern, replace)
+
+        replacer = aw.lowcode.Replacer.create(context)
+        replacer.from_file(str(file_path))
+        replacer.to_file(str(file_path))
+        replacer.execute()
+        count = callback.replaced_count
     else:
+        if not replace_all:
+            options.max_matches = 1
         count = doc.range.replace(search, replace, options)
-    doc.save(str(file_path))
+        doc.save(str(file_path))
     return int(count)
 
 

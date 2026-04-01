@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from io import BytesIO
 from typing import Any, Dict, Optional, Tuple
 
@@ -116,6 +117,54 @@ def render_page(
         iso.vertical_resolution = float(dpi)
         single.save(out, iso)
     return out.getvalue(), mime, ext
+
+
+def replace_regex_to_images_base64(
+    doc_id: str,
+    pattern: str,
+    replacement_text: str,
+    fmt: str = 'png',
+    dpi: int = 150,
+    case_sensitive: bool = False,
+) -> Dict[str, Any]:
+    file_path = ensure_path(doc_id)
+    fmt_l = (fmt or 'png').lower()
+    if fmt_l in ('jpeg', 'jpg'):
+        save_format = aw.SaveFormat.JPEG
+        mime = 'image/jpeg'
+        ext = 'jpg'
+    elif fmt_l == 'tiff':
+        save_format = aw.SaveFormat.TIFF
+        mime = 'image/tiff'
+        ext = 'tiff'
+    elif fmt_l == 'png':
+        save_format = aw.SaveFormat.PNG
+        mime = 'image/png'
+        ext = 'png'
+    else:
+        raise ValueError(f'Unsupported replace-to-images format: {fmt}')
+
+    save_options = aw.saving.ImageSaveOptions(save_format)
+    save_options.horizontal_resolution = float(dpi)
+    save_options.vertical_resolution = float(dpi)
+
+    regex_pattern = pattern if case_sensitive else f'(?i){pattern}'
+    image_streams = aw.lowcode.Replacer.replace_to_images_regex(
+        str(file_path), save_options, regex_pattern, replacement_text
+    )
+
+    images = []
+    for image_stream in image_streams:
+        image_stream.seek(0)
+        image_bytes = image_stream.read()
+        images.append(
+            {
+                'base64': base64.b64encode(image_bytes).decode('ascii'),
+                'mime': mime,
+                'ext': ext,
+            }
+        )
+    return {'images': images}
 
 
 def export_advanced(

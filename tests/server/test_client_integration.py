@@ -3,6 +3,7 @@ import base64
 import os
 from contextlib import asynccontextmanager
 
+import pytest
 from fastmcp import Client
 
 
@@ -89,17 +90,138 @@ def test_add_paragraph_and_read(mcp_client_config, result_file_path):
     _run_and_assert_file(result_file_path, run_client)
 
 
-def test_replace_text(mcp_client_config, result_file_path):
+def test_replace_text_literal_compatibility(mcp_client_config, result_file_path):
     async def run_client():
         async with _client_session(mcp_client_config) as client:
             doc_id = await _create_document_and_get_id(client)
             await client.call_tool(
-                name='insert_text_end', arguments={'doc_id': doc_id, 'text': 'Hello World'}
+                name='insert_text_end',
+                arguments={'doc_id': doc_id, 'text': 'Hello World world'},
             )
-            await client.call_tool(
+            replaced = await client.call_tool(
                 name='replace_text',
-                arguments={'doc_id': doc_id, 'search_text': 'World', 'replacement_text': 'MCP'},
+                arguments={
+                    'doc_id': doc_id,
+                    'search_text': 'World',
+                    'replacement_text': 'MCP',
+                    'case_sensitive': True,
+                },
             )
+            assert hasattr(replaced, 'data')
+            assert replaced.data == {'count': 1}
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_replace_text_regex_options(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='insert_text_end',
+                arguments={'doc_id': doc_id, 'text': 'cat scatter Cat'},
+            )
+            replaced = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': doc_id,
+                    'search_text': 'cat',
+                    'replacement_text': 'dog',
+                    'use_regex': True,
+                    'whole_word': True,
+                    'case_sensitive': False,
+                },
+            )
+            assert hasattr(replaced, 'data')
+            assert replaced.data == {'count': 2}
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_replace_text_regex_invalid_pattern_is_explicit(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='insert_text_end',
+                arguments={'doc_id': doc_id, 'text': 'sample content'},
+            )
+            with pytest.raises(Exception):
+                await client.call_tool(
+                    name='replace_text',
+                    arguments={
+                        'doc_id': doc_id,
+                        'search_text': '(',
+                        'replacement_text': 'x',
+                        'use_regex': True,
+                    },
+                )
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_replace_regex_to_images_base64_success_and_shape(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='insert_text_end',
+                arguments={'doc_id': doc_id, 'text': 'Item-100 Item-200'},
+            )
+            replaced = await client.call_tool(
+                name='replace_regex_to_images_base64',
+                arguments={
+                    'doc_id': doc_id,
+                    'pattern': r'Item-\d+',
+                    'replacement_text': 'Updated',
+                    'fmt': 'png',
+                    'dpi': 120,
+                    'case_sensitive': True,
+                },
+            )
+            assert hasattr(replaced, 'data')
+            assert isinstance(replaced.data, dict)
+            assert 'images' in replaced.data
+            assert isinstance(replaced.data['images'], list)
+            assert len(replaced.data['images']) > 0
+
+            for image_payload in replaced.data['images']:
+                assert set(image_payload.keys()) == {'base64', 'mime', 'ext'}
+                assert image_payload['mime'] == 'image/png'
+                assert image_payload['ext'] == 'png'
+                decoded = base64.b64decode(image_payload['base64'])
+                assert isinstance(decoded, (bytes, bytearray))
+                assert len(decoded) > 0
+
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_replace_regex_to_images_base64_svg_is_explicitly_unsupported(
+    mcp_client_config, result_file_path
+):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='insert_text_end',
+                arguments={'doc_id': doc_id, 'text': 'Item-100 Item-200'},
+            )
+            with pytest.raises(Exception, match='Unsupported replace-to-images format: svg'):
+                await client.call_tool(
+                    name='replace_regex_to_images_base64',
+                    arguments={
+                        'doc_id': doc_id,
+                        'pattern': r'Item-\d+',
+                        'replacement_text': 'Updated',
+                        'fmt': 'svg',
+                    },
+                )
+
             await _save_exported_to_file(result_file_path, client, doc_id)
 
     _run_and_assert_file(result_file_path, run_client)
