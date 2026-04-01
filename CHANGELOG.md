@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
-## [0.1.0] - 2025-12-02
+## [25.11.0] - 2025-12-02
 ### Added
 - Initial version of the MCP server for Aspose.Words automation (based on FastMCP).
 - Integration with Aspose.Words 25.11.0.

@@ -40,6 +40,11 @@ If server behavior changes, tool coverage changes, tool parameters change, schem
 
 Do not leave server changes without corresponding test coverage adjustments.
 
+### 4. Server versioning
+
+The MCP server version must match the version of the Aspose.Words library it is aligned with.
+When updating the server for a new Aspose.Words release, ensure that the version in `pyproject.toml` (and any other version-tracking files) is updated to match the target library version.
+
 ## Additional coding expectations
 
 - Prefer extending an existing tool when the new capability fits naturally within it.
@@ -51,3 +56,4 @@ Do not leave server changes without corresponding test coverage adjustments.
 - Preserve naming conventions, project layout, and code style already used in the repository.
 - Follow the repository Ruff configuration in pyproject.toml for formatting and linting expectations.
 - Update `CHANGELOG.md` when required by the task instructions.
+- README.md updates should be concise and integrated into existing sections. Avoid adding separate version-specific sections (e.g., `### 25.12.0 regex workflows`) or lengthy examples (e.g., `#### Regex replacement example`).
