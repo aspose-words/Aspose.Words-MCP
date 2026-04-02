@@ -176,6 +176,8 @@ def export_advanced(
     spec = specs.get(fmt_l)
     if not spec:
         raise ValueError(f'Unsupported export format: {fmt}')
+    if fmt_l == 'pdf' and opts.get('enable_text_shaping') is True:
+        doc.layout_options.enable_text_shaping = True
     if spec.get('custom'):
         data = export_markdown(doc)
         return data, spec['mime'], spec['ext']

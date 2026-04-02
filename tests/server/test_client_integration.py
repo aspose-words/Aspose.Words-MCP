@@ -304,6 +304,53 @@ def test_export_base64_advanced_docling(mcp_client_config, result_file_path):
     _run_and_assert_file(result_file_path, run_client)
 
 
+def test_export_base64_advanced_pdf_text_shaping(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='add_paragraph',
+                arguments={'doc_id': doc_id, 'text': 'PDF advanced export payload'},
+            )
+
+            pdf_default_export = await client.call_tool(
+                name='export_base64_advanced',
+                arguments={'doc_id': doc_id, 'fmt': 'pdf'},
+            )
+            assert hasattr(pdf_default_export, 'data')
+            assert isinstance(pdf_default_export.data, dict)
+            assert set(pdf_default_export.data) >= {'base64', 'mime', 'ext'}
+            assert pdf_default_export.data['ext'] == 'pdf'
+            assert pdf_default_export.data['mime'] == 'application/pdf'
+
+            decoded_default_pdf_bytes = base64.b64decode(pdf_default_export.data['base64'])
+            assert isinstance(decoded_default_pdf_bytes, (bytes, bytearray))
+            assert len(decoded_default_pdf_bytes) > 0
+
+            pdf_shaped_export = await client.call_tool(
+                name='export_base64_advanced',
+                arguments={
+                    'doc_id': doc_id,
+                    'fmt': 'pdf',
+                    'options': {'enable_text_shaping': True},
+                },
+            )
+            assert hasattr(pdf_shaped_export, 'data')
+            assert isinstance(pdf_shaped_export.data, dict)
+            assert set(pdf_shaped_export.data) >= {'base64', 'mime', 'ext'}
+            assert pdf_shaped_export.data['ext'] == 'pdf'
+            assert pdf_shaped_export.data['mime'] == 'application/pdf'
+
+            decoded_shaped_pdf_bytes = base64.b64decode(pdf_shaped_export.data['base64'])
+            assert isinstance(decoded_shaped_pdf_bytes, (bytes, bytearray))
+            assert len(decoded_shaped_pdf_bytes) > 0
+
+            with open(result_file_path, 'wb') as f:
+                f.write(decoded_shaped_pdf_bytes)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
 def test_merge_documents_with_and_without_new_page(mcp_client_config, result_file_path):
     async def run_client():
         async with _client_session(mcp_client_config) as client:
