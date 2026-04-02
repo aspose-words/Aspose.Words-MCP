@@ -9,7 +9,6 @@
 ## Features
 
 - Create documents; read/write text, headings, and paragraphs
-- Text replacement with `replace_text`: plain replacement and constrained regex replacement
 - Text formatting (font, size, style, color, underline)
 - Page and section breaks; page setup (margins, orientation, paper size, columns)
 - Lists (bulleted/numbered)

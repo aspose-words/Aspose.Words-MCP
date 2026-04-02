@@ -58,4 +58,5 @@ When updating the server for a new Aspose.Words release, ensure that the version
 - Preserve naming conventions, project layout, and code style already used in the repository.
 - Follow the repository Ruff configuration in pyproject.toml for formatting and linting expectations.
 - Update `CHANGELOG.md` when required by the task instructions.
+- Add items to the main README features list only for conceptually new top-level capabilities. Do not add sub-features, parameter variants, constrained modes of existing tools, or narrower subsets of capabilities already covered by an existing feature bullet.
 - README.md updates should be concise and integrated into existing sections. Avoid adding separate version-specific sections (e.g., `### 25.12.0 regex workflows`) or lengthy examples (e.g., `#### Regex replacement example`).
