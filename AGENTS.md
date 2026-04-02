@@ -50,6 +50,8 @@ When updating the server for a new Aspose.Words release, ensure that the version
 - Prefer extending an existing tool when the new capability fits naturally within it.
 - Add a new tool only when the functionality is clearly distinct and improves the MCP surface.
 - Keep all changes directly grounded in the release notes and API diff for the target release.
+- Remove temporary files and folders created during the task before finishing the work.
+- Do not leave behind ad hoc artifacts such as extra `__tests__` directories, scratch scripts, repro files, or one-off debugging helpers unless the task explicitly requires them to remain in the repository.
 - Do not make unrelated refactors.
 - Do not make cosmetic-only edits.
 - Do not modify unrelated files.
