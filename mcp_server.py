@@ -1701,7 +1701,9 @@ def register_tools() -> None:
     def render_page_base64(doc_id: str, page_index: int = 0, fmt: str = 'png', dpi: int = 150):
         return tool_render_page_base64(doc_id, page_index=page_index, fmt=fmt, dpi=dpi)
 
-    @mcp.tool(description='Advanced export with additional format options')
+    @mcp.tool(
+        description='Advanced export with additional format options'
+    )
     def export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):
         return tool_export_base64_advanced(doc_id, fmt=fmt, options=options)
 

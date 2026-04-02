@@ -54,25 +54,26 @@ def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
     r = srv.tool_create_document('p0-adv-export.docx')
     did = r['docId']
     srv.tool_add_paragraph(did, f'Export {fmt}')
-    options = None
-    if fmt == 'html':
-        options = {'embed_resources': True}
-    elif fmt == 'pdf':
-        options = {'compliance': 'PDF_A_1B'}
-    out = srv.tool_export_base64_advanced(did, fmt=fmt, options=options)
-    raw = base64.b64decode(out['base64'])
-    assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
-    if fmt == 'docling':
-        assert out['ext'] == 'json'
-        assert out['mime'] == 'application/json'
-        payload = raw.decode('utf-8')
-        parsed = json.loads(payload)
-        assert isinstance(parsed, (dict, list))
-    assert out['ext'] == expected_ext
-    if expected_mime.endswith('/'):
-        assert out['mime'].startswith(expected_mime)
-    else:
-        assert out['mime'] == expected_mime
+    export_calls = [{'embed_resources': True}] if fmt == 'html' else [None]
+    if fmt == 'pdf':
+        export_calls = [None, {'enable_text_shaping': True}]
+
+    for options in export_calls:
+        out = srv.tool_export_base64_advanced(did, fmt=fmt, options=options)
+        assert set(out) >= {'base64', 'mime', 'ext'}
+        raw = base64.b64decode(out['base64'])
+        assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+        if fmt == 'docling':
+            assert out['ext'] == 'json'
+            assert out['mime'] == 'application/json'
+            payload = raw.decode('utf-8')
+            parsed = json.loads(payload)
+            assert isinstance(parsed, (dict, list))
+        assert out['ext'] == expected_ext
+        if expected_mime.endswith('/'):
+            assert out['mime'].startswith(expected_mime)
+        else:
+            assert out['mime'] == expected_mime
 
 
 def test_bookmarks_and_hyperlinks():
