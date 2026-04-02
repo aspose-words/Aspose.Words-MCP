@@ -166,6 +166,12 @@ def export_advanced(
             'save_format': aw.SaveFormat.PDF,
             'builder': lambda: build_pdf_opts(opts),
         },
+        'docling': {
+            'mime': 'application/json',
+            'ext': 'json',
+            'save_format': aw.SaveFormat.DOCLING,
+            'builder': lambda: _build_docling_opts(),
+        },
     }
     spec = specs.get(fmt_l)
     if not spec:
@@ -180,3 +186,9 @@ def export_advanced(
     else:
         doc.save(out, spec['save_format'])
     return out.getvalue(), spec['mime'], spec['ext']
+
+
+def _build_docling_opts() -> Any:
+    docling_opts = aw.saving.DoclingSaveOptions()
+    docling_opts.save_format = aw.SaveFormat.DOCLING
+    return docling_opts
