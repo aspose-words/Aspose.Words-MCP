@@ -735,8 +735,11 @@ def tool_get_outline_simple(doc_id: str):
     return tool_get_outline(doc_id)
 
 
-def tool_merge(doc_ids: list):
-    new_id = _io.merge(doc_ids)
+def tool_merge(doc_ids: list, append_document_with_new_page: Optional[bool] = None):
+    new_id = _io.merge(
+        doc_ids,
+        append_document_with_new_page=append_document_with_new_page,
+    )
     first = doc_ids[0] if doc_ids else None
     base = document_store.get_document_name(first) if first else None
     merged_name = f'merged_{base}' if base else 'merged.docx'
@@ -1391,8 +1394,14 @@ def register_tools() -> None:
         )
 
     @mcp.tool(description='Merge multiple documents into one')
-    def merge_documents(source_doc_ids: list):
-        return tool_merge(source_doc_ids)
+    def merge_documents(
+        source_doc_ids: list,
+        append_document_with_new_page: Optional[bool] = None,
+    ):
+        return tool_merge(
+            source_doc_ids,
+            append_document_with_new_page=append_document_with_new_page,
+        )
 
     @mcp.tool(description='Save a copy of the document with a new name and format')
     def save_as_new(doc_id: str, name: str, fmt: str = 'docx'):

@@ -76,15 +76,26 @@ def cleanup_data_dir() -> int:
     return count
 
 
-def merge(source_ids: List[str]) -> str:
+def merge(source_ids: List[str], append_document_with_new_page: Optional[bool] = None) -> str:
     if not source_ids:
         raise ValueError('sourceIds must be non-empty')
     first_path = ensure_path(source_ids[0])
     result_doc = aw.Document(str(first_path))
+    import_format_options: Optional[aw.ImportFormatOptions] = None
+    if append_document_with_new_page is not None:
+        import_format_options = aw.ImportFormatOptions()
+        import_format_options.append_document_with_new_page = append_document_with_new_page
     for sid in source_ids[1:]:
         p = ensure_path(sid)
         src = aw.Document(str(p))
-        result_doc.append_document(src, aw.ImportFormatMode.KEEP_SOURCE_FORMATTING)
+        if import_format_options is None:
+            result_doc.append_document(src, aw.ImportFormatMode.KEEP_SOURCE_FORMATTING)
+            continue
+        result_doc.append_document(
+            src,
+            aw.ImportFormatMode.KEEP_SOURCE_FORMATTING,
+            import_format_options,
+        )
     new_id = str(uuid.uuid4())
     dst = docx_path(new_id)
     result_doc.save(str(dst))

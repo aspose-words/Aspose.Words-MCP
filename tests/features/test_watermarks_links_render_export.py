@@ -1,4 +1,5 @@
 import base64
+import json
 
 import pytest
 
@@ -46,6 +47,7 @@ def test_watermarks_and_render(fmt, expected_ext, expected_mime_prefix):
         ('md', 'md', 'text/markdown'),
         ('svg', 'svg', 'image/svg+xml'),
         ('pdf', 'pdf', 'application/pdf'),
+        ('docling', 'json', 'application/json'),
     ],
 )
 def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
@@ -60,6 +62,12 @@ def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
     out = srv.tool_export_base64_advanced(did, fmt=fmt, options=options)
     raw = base64.b64decode(out['base64'])
     assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+    if fmt == 'docling':
+        assert out['ext'] == 'json'
+        assert out['mime'] == 'application/json'
+        payload = raw.decode('utf-8')
+        parsed = json.loads(payload)
+        assert isinstance(parsed, (dict, list))
     assert out['ext'] == expected_ext
     if expected_mime.endswith('/'):
         assert out['mime'].startswith(expected_mime)

@@ -1,8 +1,11 @@
 import asyncio
 import base64
+import json
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+import aspose.words as aw
 from fastmcp import Client
 
 
@@ -27,6 +30,13 @@ async def _create_document_and_get_id(client, arguments=None):
     assert isinstance(resp.data, dict)
     assert 'docId' in resp.data
     return resp.data['docId']
+
+
+def _runtime_docx_path(doc_id):
+    docs_data_dir = os.environ.get('DOCS_DATA_DIR')
+    if not docs_data_dir:
+        raise RuntimeError('DOCS_DATA_DIR must be set for integration tests')
+    return Path(docs_data_dir) / f'{doc_id}.docx'
 
 
 async def _save_exported_to_file(result_file_path, client, doc_id):
@@ -258,5 +268,148 @@ def test_insert_list_and_table(mcp_client_config, result_file_path):
             assert isinstance(tbl.data, dict)
             assert 'tableIndex' in tbl.data
             await _save_exported_to_file(result_file_path, client, doc_id)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_export_base64_advanced_docling(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='add_paragraph', arguments={'doc_id': doc_id, 'text': 'Docling export payload'}
+            )
+
+            exported = await client.call_tool(
+                name='export_base64_advanced',
+                arguments={'doc_id': doc_id, 'fmt': 'docling'},
+            )
+            assert hasattr(exported, 'data')
+            assert isinstance(exported.data, dict)
+            assert exported.data['ext'] == 'json'
+            assert exported.data['mime'] == 'application/json'
+            assert 'base64' in exported.data
+
+            raw = base64.b64decode(exported.data['base64'])
+            assert isinstance(raw, (bytes, bytearray))
+            assert len(raw) > 0
+
+            payload = json.loads(raw.decode('utf-8'))
+            assert isinstance(payload, (dict, list))
+            assert 'Docling export payload' in json.dumps(payload)
+
+            with open(result_file_path, 'wb') as f:
+                f.write(raw)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_merge_documents_with_and_without_new_page(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            first_doc_id = await _create_document_and_get_id(client)
+            second_doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='add_paragraph',
+                arguments={'doc_id': first_doc_id, 'text': 'Default merge first source'},
+            )
+            await client.call_tool(
+                name='add_paragraph',
+                arguments={'doc_id': second_doc_id, 'text': 'Default merge second source'},
+            )
+
+            second_doc_path = _runtime_docx_path(second_doc_id)
+            second_doc = aw.Document(str(second_doc_path))
+            second_doc.first_section.page_setup.section_start = aw.SectionStart.ODD_PAGE
+            second_doc.save(str(second_doc_path))
+
+            second_doc_reloaded = aw.Document(str(second_doc_path))
+            assert (
+                second_doc_reloaded.first_section.page_setup.section_start
+                == aw.SectionStart.ODD_PAGE
+            )
+
+            merged_default = await client.call_tool(
+                name='merge_documents',
+                arguments={'source_doc_ids': [first_doc_id, second_doc_id]},
+            )
+            assert hasattr(merged_default, 'data')
+            assert isinstance(merged_default.data, dict)
+            assert 'docId' in merged_default.data
+            merged_default_id = merged_default.data['docId']
+            assert isinstance(merged_default_id, str)
+            assert merged_default_id
+
+            merged_default_text = await client.call_tool(
+                name='get_text', arguments={'doc_id': merged_default_id}
+            )
+            assert hasattr(merged_default_text, 'data')
+            assert isinstance(merged_default_text.data, dict)
+            assert 'text' in merged_default_text.data
+            assert 'Default merge first source' in merged_default_text.data['text']
+            assert 'Default merge second source' in merged_default_text.data['text']
+
+            merged_default_info = await client.call_tool(
+                name='get_info', arguments={'doc_id': merged_default_id}
+            )
+            assert hasattr(merged_default_info, 'data')
+            assert isinstance(merged_default_info.data, dict)
+            assert 'pages' in merged_default_info.data
+
+            merged_preserve_source_section_start = await client.call_tool(
+                name='merge_documents',
+                arguments={
+                    'source_doc_ids': [first_doc_id, second_doc_id],
+                    'append_document_with_new_page': False,
+                },
+            )
+            assert hasattr(merged_preserve_source_section_start, 'data')
+            assert isinstance(merged_preserve_source_section_start.data, dict)
+            assert 'docId' in merged_preserve_source_section_start.data
+            merged_preserve_source_section_start_id = merged_preserve_source_section_start.data[
+                'docId'
+            ]
+            assert isinstance(merged_preserve_source_section_start_id, str)
+            assert merged_preserve_source_section_start_id
+
+            merged_preserve_source_section_start_text = await client.call_tool(
+                name='get_text', arguments={'doc_id': merged_preserve_source_section_start_id}
+            )
+            assert hasattr(merged_preserve_source_section_start_text, 'data')
+            assert isinstance(merged_preserve_source_section_start_text.data, dict)
+            assert 'text' in merged_preserve_source_section_start_text.data
+            assert (
+                'Default merge first source'
+                in merged_preserve_source_section_start_text.data['text']
+            )
+            assert (
+                'Default merge second source'
+                in merged_preserve_source_section_start_text.data['text']
+            )
+
+            merged_preserve_source_section_start_info = await client.call_tool(
+                name='get_info', arguments={'doc_id': merged_preserve_source_section_start_id}
+            )
+            assert hasattr(merged_preserve_source_section_start_info, 'data')
+            assert isinstance(merged_preserve_source_section_start_info.data, dict)
+            assert 'pages' in merged_preserve_source_section_start_info.data
+
+            merged_default_doc = aw.Document(str(_runtime_docx_path(merged_default_id)))
+            merged_preserve_source_section_start_doc = aw.Document(
+                str(_runtime_docx_path(merged_preserve_source_section_start_id))
+            )
+            assert merged_default_doc.sections.count >= 2
+            assert merged_preserve_source_section_start_doc.sections.count >= 2
+            assert (
+                merged_default_doc.sections[1].page_setup.section_start == aw.SectionStart.NEW_PAGE
+            )
+            assert (
+                merged_preserve_source_section_start_doc.sections[1].page_setup.section_start
+                == aw.SectionStart.ODD_PAGE
+            )
+
+            await _save_exported_to_file(
+                result_file_path, client, merged_preserve_source_section_start_id
+            )
 
     _run_and_assert_file(result_file_path, run_client)
