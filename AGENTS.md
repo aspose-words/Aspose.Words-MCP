@@ -55,6 +55,7 @@ When updating the server for a new Aspose.Words release, ensure that the version
 - Do not make unrelated refactors.
 - Do not make cosmetic-only edits.
 - Do not modify unrelated files.
+- Keep MCP tool descriptions at the same level of abstraction as the underlying API summary. Do not update a tool description just because a specific option, flag, or narrow format-specific variant was added, changed, or removed when the existing description is still a correct general description of the tool.
 - Preserve naming conventions, project layout, and code style already used in the repository.
 - Follow the repository Ruff configuration in pyproject.toml for formatting and linting expectations.
 - Update `CHANGELOG.md` when required by the task instructions.

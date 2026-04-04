@@ -19,7 +19,7 @@
 - Protection: protect/unprotect, partial editing restrictions
 - Bookmarks, hyperlinks
 - Watermarks (text/image)
-- Export as Base64 (DOCX, PDF, etc.), advanced export options including Docling advanced export
+- Export as Base64 (DOCX, PDF, etc.)
 - Render page to image (PNG, etc.)
 - In-memory document management: copy, save as, list, delete, merge
 
