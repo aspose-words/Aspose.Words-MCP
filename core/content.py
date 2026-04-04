@@ -247,6 +247,10 @@ def replace_text(
     use_regex: bool = False,
     search_text: Optional[str] = None,
     replacement_text: Optional[str] = None,
+    join_runs: bool = False,
+    ignore_redundant: Optional[bool] = None,
+    ignore_insignificant: Optional[bool] = None,
+    ignore_spacing: Optional[bool] = None,
 ) -> int:
     file_path = ensure_path(doc_id)
     doc = aw.Document(str(file_path))
@@ -274,6 +278,24 @@ def replace_text(
         count = doc.range.replace_regex(resolved_search, resolved_replace, options)
     else:
         count = doc.range.replace(resolved_search, resolved_replace, options)
+
+    if count == 0:
+        return 0
+
+    if join_runs:
+        join_runs_options = aw.JoinRunsOptions()
+        if ignore_redundant is not None:
+            join_runs_options.ignore_redundant = bool(ignore_redundant)
+        if ignore_insignificant is not None:
+            join_runs_options.ignore_insignificant = bool(ignore_insignificant)
+        if ignore_spacing is not None:
+            join_runs_options.ignore_spacing = bool(ignore_spacing)
+
+        paragraph_nodes = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+        for index in range(paragraph_nodes.count):
+            paragraph = paragraph_nodes[index].as_paragraph()
+            paragraph.join_runs_with_same_formatting(join_runs_options)
+
     doc.save(str(file_path))
     return int(count)
 
