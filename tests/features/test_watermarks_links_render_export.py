@@ -75,6 +75,49 @@ def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
         assert out['mime'] == expected_mime
 
 
+def test_export_pdf_text_shaping_helper_workflow(monkeypatch):
+    r = srv.tool_create_document('p0-pdf-text-shaping.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'PDF export text shaping')
+
+    basic_calls = []
+    advanced_calls = []
+
+    def _fake_export(doc_id, fmt='docx', enable_text_shaping=False):
+        basic_calls.append((doc_id, fmt, enable_text_shaping))
+        return b'%PDF-basic-forwarded', 'application/pdf', 'pdf'
+
+    def _fake_export_advanced(doc_id, fmt='docx', options=None):
+        advanced_calls.append((doc_id, fmt, options))
+        return b'%PDF-advanced-forwarded', 'application/pdf', 'pdf'
+
+    monkeypatch.setattr(srv._export, 'export', _fake_export)
+    monkeypatch.setattr(srv._export, 'export_advanced', _fake_export_advanced)
+
+    explicit_basic = srv.tool_export_base64(did, fmt='pdf', enable_text_shaping=True)
+    default_basic = srv.tool_export_base64(did, fmt='pdf')
+    explicit_advanced = srv.tool_export_base64_advanced(
+        did,
+        fmt='pdf',
+        options={'compliance': 'PDF_A_1B', 'enable_text_shaping': True},
+    )
+
+    for out in (explicit_basic, default_basic, explicit_advanced):
+        raw = base64.b64decode(out['base64'])
+        assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+        assert out['mime'] == 'application/pdf'
+        assert out['ext'] == 'pdf'
+
+    assert basic_calls == [
+        (did, 'pdf', True),
+        (did, 'pdf', False),
+    ]
+    assert len(advanced_calls) == 1
+    assert advanced_calls[0][0] == did
+    assert advanced_calls[0][1] == 'pdf'
+    assert advanced_calls[0][2] == {'compliance': 'PDF_A_1B', 'enable_text_shaping': True}
+
+
 def test_bookmarks_and_hyperlinks():
     r = srv.tool_create_document('p0-links.docx')
     did = r['docId']

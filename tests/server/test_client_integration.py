@@ -304,6 +304,42 @@ def test_export_base64_advanced_docling(mcp_client_config, result_file_path):
     _run_and_assert_file(result_file_path, run_client)
 
 
+def test_export_base64_advanced_pdf_text_shaping(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='add_paragraph',
+                arguments={'doc_id': doc_id, 'text': 'PDF text shaping payload'},
+            )
+
+            exported = await client.call_tool(
+                name='export_base64_advanced',
+                arguments={
+                    'doc_id': doc_id,
+                    'fmt': 'pdf',
+                    'options': {'enable_text_shaping': True},
+                },
+            )
+            assert hasattr(exported, 'data')
+            assert isinstance(exported.data, dict)
+            assert 'base64' in exported.data
+            assert 'mime' in exported.data
+            assert 'ext' in exported.data
+            assert exported.data['mime'] == 'application/pdf'
+            assert exported.data['ext'] == 'pdf'
+
+            raw = base64.b64decode(exported.data['base64'])
+            assert isinstance(raw, (bytes, bytearray))
+            assert len(raw) > 0
+            assert raw.startswith(b'%PDF-')
+
+            with open(result_file_path, 'wb') as f:
+                f.write(raw)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
 def test_merge_documents_with_and_without_new_page(mcp_client_config, result_file_path):
     async def run_client():
         async with _client_session(mcp_client_config) as client:

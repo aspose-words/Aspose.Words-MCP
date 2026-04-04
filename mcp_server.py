@@ -82,8 +82,12 @@ def tool_read_paragraphs(doc_id: str, start: Optional[int] = None, end: Optional
     return {'paragraphs': paras}
 
 
-def tool_export_base64(doc_id: str, fmt: str = 'docx'):
-    data, mime, ext = _export.export(doc_id, fmt=fmt)
+def tool_export_base64(doc_id: str, fmt: str = 'docx', enable_text_shaping: Optional[bool] = None):
+    data, mime, ext = _export.export(
+        doc_id,
+        fmt=fmt,
+        enable_text_shaping=bool(enable_text_shaping),
+    )
     b64 = base64.b64encode(data).decode('utf-8')
     return {'base64': b64, 'mime': mime, 'ext': ext}
 
@@ -1011,9 +1015,16 @@ def register_tools() -> None:
     def read_paragraphs(doc_id: str, start: Optional[int] = None, end: Optional[int] = None):
         return tool_read_paragraphs(doc_id, start=start, end=end)
 
-    @mcp.tool(description='Export the document to the specified format and return as base64')
-    def export_base64(doc_id: str, fmt: str = 'docx'):
-        return tool_export_base64(doc_id, fmt=fmt)
+    @mcp.tool(
+        description='Export the document to the specified format and return as base64 '
+        '(PDF supports optional enable_text_shaping)'
+    )
+    def export_base64(doc_id: str, fmt: str = 'docx', enable_text_shaping: Optional[bool] = None):
+        return tool_export_base64(
+            doc_id,
+            fmt=fmt,
+            enable_text_shaping=enable_text_shaping,
+        )
 
     @mcp.tool(description='Get general document information')
     def get_info(doc_id: str):
@@ -1701,7 +1712,10 @@ def register_tools() -> None:
     def render_page_base64(doc_id: str, page_index: int = 0, fmt: str = 'png', dpi: int = 150):
         return tool_render_page_base64(doc_id, page_index=page_index, fmt=fmt, dpi=dpi)
 
-    @mcp.tool(description='Advanced export with additional format options')
+    @mcp.tool(
+        description='Advanced export with additional format options '
+        '(for PDF, pass enable_text_shaping in options)'
+    )
     def export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):
         return tool_export_base64_advanced(doc_id, fmt=fmt, options=options)
 

@@ -57,11 +57,15 @@ def build_html_opts(fmt_key: str, embed_resources: bool) -> Any:
     return opts
 
 
-def export(doc_id: str, fmt: str = 'docx') -> Tuple[bytes, str, str]:
+def export(
+    doc_id: str, fmt: str = 'docx', enable_text_shaping: bool = False
+) -> Tuple[bytes, str, str]:
     file_path = ensure_path(doc_id)
     doc = aw.Document(str(file_path))
     fmt_l = (fmt or 'docx').lower()
     if fmt_l == 'pdf':
+        if enable_text_shaping:
+            doc.layout_options.enable_text_shaping = True
         save_format = aw.SaveFormat.PDF
         mime = 'application/pdf'
         ext = 'pdf'
@@ -125,6 +129,8 @@ def export_advanced(
     doc = aw.Document(str(file_path))
     fmt_l = (fmt or 'docx').lower()
     opts = options or {}
+    if fmt_l == 'pdf' and bool(opts.get('enable_text_shaping')):
+        doc.layout_options.enable_text_shaping = True
     specs: Dict[str, Dict[str, Any]] = {
         'html': {
             'mime': 'text/html',

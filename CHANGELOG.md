@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.2.0] - 2026-04-04
+### Added
+- Exposed PDF text-shaping controls through the existing PDF save-options MCP surface.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.2.0.
+
 ## [26.1.0] - 2026-04-02
 ### Added
 - Exposed Docling export through the advanced export MCP surface.

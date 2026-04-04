@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
-**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.1.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
+**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.2.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
 
 ## Features
 
@@ -19,7 +19,7 @@
 - Protection: protect/unprotect, partial editing restrictions
 - Bookmarks, hyperlinks
 - Watermarks (text/image)
-- Export as Base64 (DOCX, PDF, etc.)
+- Export as Base64 (DOCX, PDF, etc.) with basic and advanced save options, including PDF text shaping via `export_base64_advanced` options
 - Render page to image (PNG, etc.)
 - In-memory document management: copy, save as, list, delete, merge
 
@@ -114,7 +114,7 @@ Main tool categories:
 - properties: document properties
 - protection: protection and restrictions
 - comments/notes: comments, footnotes/endnotes
-- export/render: export (including Docling advanced export), page rendering
+- export/render: export (including Docling advanced export and advanced save options, plus PDF text shaping via `export_base64_advanced`), page rendering
 
 ## Example Workflow via an MCP Client
 
@@ -125,7 +125,7 @@ Sequence of tool calls (names match the server):
 3. `add_paragraph` / `insert_text_end`
 4. `add_table_end` or `add_table_at_paragraph`
 5. `add_watermark_text` or `add_watermark_image_base64`
-6. `export_base64` (e.g., `fmt="pdf"`) — get file as Base64
+6. `export_base64` (e.g., `fmt="pdf"`) for basic export, or `export_base64_advanced` with advanced save options (for PDF text shaping, pass `options={"enable_text_shaping": true}`) — get file as Base64
 
 ## Integration with MCP Clients
 
