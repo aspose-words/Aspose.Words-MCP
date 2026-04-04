@@ -39,6 +39,66 @@ def _runtime_docx_path(doc_id):
     return Path(docs_data_dir) / f'{doc_id}.docx'
 
 
+def _set_adjacent_same_format_runs(doc_id, marker_text):
+    doc_path = _runtime_docx_path(doc_id)
+    document = aw.Document(str(doc_path))
+    body = document.first_section.body
+    body.remove_all_children()
+
+    paragraph = aw.Paragraph(document)
+    paragraph.append_child(aw.Run(document, marker_text))
+    paragraph.append_child(aw.Run(document, 'token'))
+    body.append_child(paragraph)
+
+    document.save(str(doc_path))
+
+
+def _set_adjacent_runs_with_spacing_difference(doc_id, marker_text):
+    doc_path = _runtime_docx_path(doc_id)
+    document = aw.Document(str(doc_path))
+    body = document.first_section.body
+    body.remove_all_children()
+
+    paragraph = aw.Paragraph(document)
+    marker_run = aw.Run(document, marker_text)
+    token_run = aw.Run(document, 'token')
+    token_run.font.spacing = 2.0
+    paragraph.append_child(marker_run)
+    paragraph.append_child(token_run)
+    body.append_child(paragraph)
+
+    document.save(str(doc_path))
+
+
+def _set_runs_with_bold_whitespace_trailing(doc_id, marker_text):
+    doc_path = _runtime_docx_path(doc_id)
+    document = aw.Document(str(doc_path))
+    body = document.first_section.body
+    body.remove_all_children()
+
+    paragraph = aw.Paragraph(document)
+    paragraph.append_child(aw.Run(document, marker_text))
+    paragraph.append_child(aw.Run(document, 'token'))
+
+    trailing_whitespace_run = aw.Run(document, ' ')
+    trailing_whitespace_run.font.bold = True
+    paragraph.append_child(trailing_whitespace_run)
+    body.append_child(paragraph)
+
+    document.save(str(doc_path))
+
+
+def _paragraph_with_marker(doc_id, marker_text):
+    document = aw.Document(str(_runtime_docx_path(doc_id)))
+    paragraph_nodes = document.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    for paragraph_index in range(paragraph_nodes.count):
+        paragraph = paragraph_nodes[paragraph_index].as_paragraph()
+        paragraph_text = paragraph.to_string(aw.SaveFormat.TEXT)
+        if marker_text in paragraph_text:
+            return paragraph
+    raise AssertionError(f'Paragraph with marker not found: {marker_text}')
+
+
 async def _save_exported_to_file(result_file_path, client, doc_id):
     exported = await client.call_tool(
         name='export_base64', arguments={'doc_id': doc_id, 'fmt': 'docx'}
@@ -141,6 +201,200 @@ def test_replace_text(mcp_client_config, result_file_path):
             assert hasattr(zero, 'data')
             assert isinstance(zero.data, dict)
             assert zero.data['count'] == 0
+
+            marker_text = 'join-marker:'
+            join_doc_id = await _create_document_and_get_id(
+                client, {'name': 'replace-join-client.docx'}
+            )
+            _set_adjacent_same_format_runs(join_doc_id, marker_text)
+
+            joined = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': join_doc_id,
+                    'find_text': 'token',
+                    'replace_text': 'TOKEN',
+                    'join_runs': True,
+                    'ignore_redundant': True,
+                    'ignore_insignificant': True,
+                    'ignore_spacing': True,
+                },
+            )
+            assert hasattr(joined, 'data')
+            assert isinstance(joined.data, dict)
+            assert set(joined.data.keys()) == {'count'}
+            assert joined.data['count'] == 1
+
+            target_paragraph = _paragraph_with_marker(join_doc_id, marker_text)
+            assert target_paragraph.runs.count == 1
+            assert target_paragraph.runs[0].text == f'{marker_text}TOKEN'
+
+            spacing_without_ignore_marker_text = 'join-spacing-off-marker:'
+            spacing_without_ignore_doc_id = await _create_document_and_get_id(
+                client, {'name': 'replace-join-spacing-off-client.docx'}
+            )
+            _set_adjacent_runs_with_spacing_difference(
+                spacing_without_ignore_doc_id, spacing_without_ignore_marker_text
+            )
+
+            spacing_without_ignore = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': spacing_without_ignore_doc_id,
+                    'find_text': 'token',
+                    'replace_text': 'TOKEN',
+                    'join_runs': True,
+                },
+            )
+            assert hasattr(spacing_without_ignore, 'data')
+            assert isinstance(spacing_without_ignore.data, dict)
+            assert set(spacing_without_ignore.data.keys()) == {'count'}
+            assert spacing_without_ignore.data['count'] == 1
+
+            spacing_without_ignore_paragraph = _paragraph_with_marker(
+                spacing_without_ignore_doc_id, spacing_without_ignore_marker_text
+            )
+            assert spacing_without_ignore_paragraph.runs.count == 2
+            assert (
+                spacing_without_ignore_paragraph.runs[0].text == spacing_without_ignore_marker_text
+            )
+            assert spacing_without_ignore_paragraph.runs[1].text == 'TOKEN'
+
+            spacing_with_ignore_marker_text = 'join-spacing-on-marker:'
+            spacing_with_ignore_doc_id = await _create_document_and_get_id(
+                client, {'name': 'replace-join-spacing-on-client.docx'}
+            )
+            _set_adjacent_runs_with_spacing_difference(
+                spacing_with_ignore_doc_id, spacing_with_ignore_marker_text
+            )
+
+            spacing_with_ignore = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': spacing_with_ignore_doc_id,
+                    'find_text': 'token',
+                    'replace_text': 'TOKEN',
+                    'join_runs': True,
+                    'ignore_spacing': True,
+                },
+            )
+            assert hasattr(spacing_with_ignore, 'data')
+            assert isinstance(spacing_with_ignore.data, dict)
+            assert set(spacing_with_ignore.data.keys()) == {'count'}
+            assert spacing_with_ignore.data['count'] == 1
+
+            spacing_with_ignore_paragraph = _paragraph_with_marker(
+                spacing_with_ignore_doc_id, spacing_with_ignore_marker_text
+            )
+            assert spacing_with_ignore_paragraph.runs.count == 1
+            assert (
+                spacing_with_ignore_paragraph.runs[0].text
+                == f'{spacing_with_ignore_marker_text}TOKEN'
+            )
+
+            insignificant_without_ignore_marker_text = 'join-insignificant-off-marker:'
+            insignificant_without_ignore_doc_id = await _create_document_and_get_id(
+                client, {'name': 'replace-join-insignificant-off-client.docx'}
+            )
+            _set_runs_with_bold_whitespace_trailing(
+                insignificant_without_ignore_doc_id, insignificant_without_ignore_marker_text
+            )
+
+            insignificant_without_ignore = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': insignificant_without_ignore_doc_id,
+                    'find_text': 'token',
+                    'replace_text': 'TOKEN',
+                    'join_runs': True,
+                },
+            )
+            assert hasattr(insignificant_without_ignore, 'data')
+            assert isinstance(insignificant_without_ignore.data, dict)
+            assert set(insignificant_without_ignore.data.keys()) == {'count'}
+            assert insignificant_without_ignore.data['count'] == 1
+
+            insignificant_without_ignore_paragraph = _paragraph_with_marker(
+                insignificant_without_ignore_doc_id, insignificant_without_ignore_marker_text
+            )
+            assert insignificant_without_ignore_paragraph.runs.count == 2
+            assert (
+                insignificant_without_ignore_paragraph.runs[0].text
+                == f'{insignificant_without_ignore_marker_text}TOKEN'
+            )
+            assert insignificant_without_ignore_paragraph.runs[1].text == ' '
+
+            insignificant_with_ignore_marker_text = 'join-insignificant-on-marker:'
+            insignificant_with_ignore_doc_id = await _create_document_and_get_id(
+                client, {'name': 'replace-join-insignificant-on-client.docx'}
+            )
+            _set_runs_with_bold_whitespace_trailing(
+                insignificant_with_ignore_doc_id, insignificant_with_ignore_marker_text
+            )
+
+            insignificant_with_ignore = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': insignificant_with_ignore_doc_id,
+                    'find_text': 'token',
+                    'replace_text': 'TOKEN',
+                    'join_runs': True,
+                    'ignore_insignificant': True,
+                },
+            )
+            assert hasattr(insignificant_with_ignore, 'data')
+            assert isinstance(insignificant_with_ignore.data, dict)
+            assert set(insignificant_with_ignore.data.keys()) == {'count'}
+            assert insignificant_with_ignore.data['count'] == 1
+
+            insignificant_with_ignore_paragraph = _paragraph_with_marker(
+                insignificant_with_ignore_doc_id, insignificant_with_ignore_marker_text
+            )
+            assert insignificant_with_ignore_paragraph.runs.count == 1
+            assert (
+                insignificant_with_ignore_paragraph.runs[0].text
+                == f'{insignificant_with_ignore_marker_text}TOKEN '
+            )
+
+            zero_match_marker_text = 'join-zero-marker:'
+            zero_match_doc_id = await _create_document_and_get_id(
+                client, {'name': 'replace-join-zero-match-client.docx'}
+            )
+            _set_adjacent_same_format_runs(zero_match_doc_id, zero_match_marker_text)
+
+            before_zero_match_paragraph = _paragraph_with_marker(
+                zero_match_doc_id, zero_match_marker_text
+            )
+            before_zero_match_run_count = before_zero_match_paragraph.runs.count
+            before_zero_match_run_texts = [
+                before_zero_match_paragraph.runs[run_index].text
+                for run_index in range(before_zero_match_run_count)
+            ]
+
+            zero_match = await client.call_tool(
+                name='replace_text',
+                arguments={
+                    'doc_id': zero_match_doc_id,
+                    'find_text': 'absent-token',
+                    'replace_text': 'TOKEN',
+                    'join_runs': True,
+                },
+            )
+            assert hasattr(zero_match, 'data')
+            assert isinstance(zero_match.data, dict)
+            assert set(zero_match.data.keys()) == {'count'}
+            assert zero_match.data['count'] == 0
+
+            after_zero_match_paragraph = _paragraph_with_marker(
+                zero_match_doc_id, zero_match_marker_text
+            )
+            after_zero_match_run_count = after_zero_match_paragraph.runs.count
+            after_zero_match_run_texts = [
+                after_zero_match_paragraph.runs[run_index].text
+                for run_index in range(after_zero_match_run_count)
+            ]
+            assert after_zero_match_run_count == before_zero_match_run_count
+            assert after_zero_match_run_texts == before_zero_match_run_texts
 
             await _save_exported_to_file(result_file_path, client, doc_id)
 

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.3.0] - 2026-04-04
+### Added
+- Exposed opt-in run joining through the existing text replacement MCP surface.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.3.0.
+- Clarified that non-MCP-reachable 26.3.0 APIs remain out of scope for this server surface.
+
 ## [26.2.0] - 2026-04-02
 ### Added
 - Exposed text-shaping control for advanced PDF export through the existing export MCP surface.

@@ -168,6 +168,10 @@ def tool_replace_text(
     use_regex: bool = False,
     search_text: Optional[str] = None,
     replacement_text: Optional[str] = None,
+    join_runs: bool = False,
+    ignore_redundant: Optional[bool] = None,
+    ignore_insignificant: Optional[bool] = None,
+    ignore_spacing: Optional[bool] = None,
 ):
     has_find_text = find_text is not None
     has_search_text = search_text is not None
@@ -201,6 +205,10 @@ def tool_replace_text(
         case_sensitive=case_sensitive,
         whole_word=whole_word,
         use_regex=use_regex,
+        join_runs=join_runs,
+        ignore_redundant=ignore_redundant,
+        ignore_insignificant=ignore_insignificant,
+        ignore_spacing=ignore_spacing,
     )
     return {'count': int(count)}
 
@@ -215,6 +223,10 @@ def _replace_text_wrapper(
     case_sensitive: bool = False,
     whole_word: bool = False,
     use_regex: bool = False,
+    join_runs: bool = False,
+    ignore_redundant: Optional[bool] = None,
+    ignore_insignificant: Optional[bool] = None,
+    ignore_spacing: Optional[bool] = None,
 ):
     return tool_replace_text(
         doc_id=doc_id,
@@ -226,6 +238,10 @@ def _replace_text_wrapper(
         case_sensitive=case_sensitive,
         whole_word=whole_word,
         use_regex=use_regex,
+        join_runs=join_runs,
+        ignore_redundant=ignore_redundant,
+        ignore_insignificant=ignore_insignificant,
+        ignore_spacing=ignore_spacing,
     )
 
 
@@ -1701,9 +1717,7 @@ def register_tools() -> None:
     def render_page_base64(doc_id: str, page_index: int = 0, fmt: str = 'png', dpi: int = 150):
         return tool_render_page_base64(doc_id, page_index=page_index, fmt=fmt, dpi=dpi)
 
-    @mcp.tool(
-        description='Advanced export with additional format options'
-    )
+    @mcp.tool(description='Advanced export with additional format options')
     def export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):
         return tool_export_base64_advanced(doc_id, fmt=fmt, options=options)
 

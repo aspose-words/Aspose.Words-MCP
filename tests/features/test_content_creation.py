@@ -1,7 +1,10 @@
 import pytest
 
 pytest.importorskip('aspose.words')
+import aspose.words as aw
+
 import mcp_server as srv
+from core.utils import docs_util as _docs
 
 
 def test_add_headings_and_get_outline():
@@ -71,6 +74,76 @@ def _doc_with_text(name: str, text: str) -> str:
     return doc_id
 
 
+def _doc_with_adjacent_same_format_runs(name: str) -> tuple[str, str]:
+    doc_id = srv.tool_create_document(name)['docId']
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    body = document.first_section.body
+    body.remove_all_children()
+
+    marker_text = 'join-marker:'
+    paragraph = aw.Paragraph(document)
+    paragraph.append_child(aw.Run(document, marker_text))
+    paragraph.append_child(aw.Run(document, 'token'))
+    body.append_child(paragraph)
+
+    document.save(str(doc_path))
+    return doc_id, marker_text
+
+
+def _doc_with_spacing_difference_between_adjacent_runs(name: str) -> tuple[str, str]:
+    doc_id = srv.tool_create_document(name)['docId']
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    body = document.first_section.body
+    body.remove_all_children()
+
+    marker_text = 'spacing-marker:'
+    paragraph = aw.Paragraph(document)
+    marker_run = aw.Run(document, marker_text)
+    token_run = aw.Run(document, 'token')
+    token_run.font.spacing = 2.0
+    paragraph.append_child(marker_run)
+    paragraph.append_child(token_run)
+    body.append_child(paragraph)
+
+    document.save(str(doc_path))
+    return doc_id, marker_text
+
+
+def _doc_with_bold_whitespace_trailing_run(name: str) -> tuple[str, str]:
+    doc_id = srv.tool_create_document(name)['docId']
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    body = document.first_section.body
+    body.remove_all_children()
+
+    marker_text = 'insignificant-marker:'
+    paragraph = aw.Paragraph(document)
+    paragraph.append_child(aw.Run(document, marker_text))
+    paragraph.append_child(aw.Run(document, 'token'))
+
+    trailing_whitespace_run = aw.Run(document, ' ')
+    trailing_whitespace_run.font.bold = True
+    paragraph.append_child(trailing_whitespace_run)
+    body.append_child(paragraph)
+
+    document.save(str(doc_path))
+    return doc_id, marker_text
+
+
+def _paragraph_with_marker(doc_id: str, marker_text: str) -> aw.Paragraph:
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    paragraph_nodes = document.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    for paragraph_index in range(paragraph_nodes.count):
+        paragraph = paragraph_nodes[paragraph_index].as_paragraph()
+        paragraph_text = paragraph.to_string(aw.SaveFormat.TEXT)
+        if marker_text in paragraph_text:
+            return paragraph
+    raise AssertionError(f'Paragraph with marker not found: {marker_text}')
+
+
 def test_near_text_insertions_and_lists():
     res = srv.tool_create_document('near.docx')
     did = res['docId']
@@ -131,6 +204,138 @@ def test_replace_text_regex_plain_literal_and_zero_match_behavior():
     after = srv.tool_get_text(doc_id)['text']
     assert zero['count'] == 0
     assert after == before
+
+
+def test_replace_text_default_omits_run_joining_for_direct_tool_flow():
+    doc_id, marker_text = _doc_with_adjacent_same_format_runs('replace-default-join.docx')
+
+    replacement_response = srv.tool_replace_text(doc_id, find_text='token', replace_text='TOKEN')
+
+    assert set(replacement_response.keys()) == {'count'}
+    assert replacement_response['count'] == 1
+
+    target_paragraph = _paragraph_with_marker(doc_id, marker_text)
+    assert target_paragraph.runs.count == 2
+    assert target_paragraph.runs[0].text == marker_text
+    assert target_paragraph.runs[1].text == 'TOKEN'
+
+
+def test_replace_text_join_runs_merges_adjacent_same_format_runs_for_direct_tool_flow():
+    doc_id, marker_text = _doc_with_adjacent_same_format_runs('replace-opt-in-join.docx')
+
+    replacement_response = srv.tool_replace_text(
+        doc_id,
+        find_text='token',
+        replace_text='TOKEN',
+        join_runs=True,
+    )
+
+    assert set(replacement_response.keys()) == {'count'}
+    assert replacement_response['count'] == 1
+
+    target_paragraph = _paragraph_with_marker(doc_id, marker_text)
+    assert target_paragraph.runs.count == 1
+    assert target_paragraph.runs[0].text == f'{marker_text}TOKEN'
+
+
+def test_replace_text_join_runs_zero_match_leaves_run_structure_unchanged_for_direct_tool_flow():
+    doc_id, marker_text = _doc_with_adjacent_same_format_runs('replace-opt-in-join-zero-match.docx')
+
+    before_paragraph = _paragraph_with_marker(doc_id, marker_text)
+    before_run_count = before_paragraph.runs.count
+    before_run_texts = [before_paragraph.runs[index].text for index in range(before_run_count)]
+
+    replacement_response = srv.tool_replace_text(
+        doc_id,
+        find_text='absent-token',
+        replace_text='TOKEN',
+        join_runs=True,
+    )
+
+    assert set(replacement_response.keys()) == {'count'}
+    assert replacement_response['count'] == 0
+
+    after_paragraph = _paragraph_with_marker(doc_id, marker_text)
+    after_run_count = after_paragraph.runs.count
+    after_run_texts = [after_paragraph.runs[index].text for index in range(after_run_count)]
+    assert after_run_count == before_run_count
+    assert after_run_texts == before_run_texts
+
+
+def test_replace_text_ignore_spacing_changes_join_behavior_for_direct_tool_flow():
+    without_ignore_doc_id, without_ignore_marker = (
+        _doc_with_spacing_difference_between_adjacent_runs('replace-join-spacing-off.docx')
+    )
+    without_ignore_response = srv.tool_replace_text(
+        without_ignore_doc_id,
+        find_text='token',
+        replace_text='TOKEN',
+        join_runs=True,
+    )
+
+    assert set(without_ignore_response.keys()) == {'count'}
+    assert without_ignore_response['count'] == 1
+
+    without_ignore_paragraph = _paragraph_with_marker(without_ignore_doc_id, without_ignore_marker)
+    assert without_ignore_paragraph.runs.count == 2
+    assert without_ignore_paragraph.runs[0].text == without_ignore_marker
+    assert without_ignore_paragraph.runs[1].text == 'TOKEN'
+
+    with_ignore_doc_id, with_ignore_marker = _doc_with_spacing_difference_between_adjacent_runs(
+        'replace-join-spacing-on.docx'
+    )
+    with_ignore_response = srv.tool_replace_text(
+        with_ignore_doc_id,
+        find_text='token',
+        replace_text='TOKEN',
+        join_runs=True,
+        ignore_spacing=True,
+    )
+
+    assert set(with_ignore_response.keys()) == {'count'}
+    assert with_ignore_response['count'] == 1
+
+    with_ignore_paragraph = _paragraph_with_marker(with_ignore_doc_id, with_ignore_marker)
+    assert with_ignore_paragraph.runs.count == 1
+    assert with_ignore_paragraph.runs[0].text == f'{with_ignore_marker}TOKEN'
+
+
+def test_replace_text_ignore_insignificant_changes_join_behavior_for_direct_tool_flow():
+    without_ignore_doc_id, without_ignore_marker = _doc_with_bold_whitespace_trailing_run(
+        'replace-join-insignificant-off.docx'
+    )
+    without_ignore_response = srv.tool_replace_text(
+        without_ignore_doc_id,
+        find_text='token',
+        replace_text='TOKEN',
+        join_runs=True,
+    )
+
+    assert set(without_ignore_response.keys()) == {'count'}
+    assert without_ignore_response['count'] == 1
+
+    without_ignore_paragraph = _paragraph_with_marker(without_ignore_doc_id, without_ignore_marker)
+    assert without_ignore_paragraph.runs.count == 2
+    assert without_ignore_paragraph.runs[0].text == f'{without_ignore_marker}TOKEN'
+    assert without_ignore_paragraph.runs[1].text == ' '
+
+    with_ignore_doc_id, with_ignore_marker = _doc_with_bold_whitespace_trailing_run(
+        'replace-join-insignificant-on.docx'
+    )
+    with_ignore_response = srv.tool_replace_text(
+        with_ignore_doc_id,
+        find_text='token',
+        replace_text='TOKEN',
+        join_runs=True,
+        ignore_insignificant=True,
+    )
+
+    assert set(with_ignore_response.keys()) == {'count'}
+    assert with_ignore_response['count'] == 1
+
+    with_ignore_paragraph = _paragraph_with_marker(with_ignore_doc_id, with_ignore_marker)
+    assert with_ignore_paragraph.runs.count == 1
+    assert with_ignore_paragraph.runs[0].text == f'{with_ignore_marker}TOKEN '
 
 
 def test_insert_text_start_and_at_paragraph_and_delete():
