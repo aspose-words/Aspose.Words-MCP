@@ -10,7 +10,10 @@ The format is based on "Keep a Changelog", and versioning adheres to Semantic Ve
 
 ### Changed
 - Aligned server versioning with Aspose.Words 26.3.0.
-- Clarified that non-MCP-reachable 26.3.0 APIs remain out of scope for this server surface.
+
+### Skipped
+- `OpenAiModel(name)` / `OpenAiModel(name, api_key)` were not exposed because this MCP server has no AI tool surface, and exposing them would require new secret/configuration infrastructure.
+- `TableStyle.bidi` removal has no server-visible impact because this API is not used in this repository and is not exposed through MCP tools.
 
 ## [26.2.0] - 2026-04-02
 ### Added
