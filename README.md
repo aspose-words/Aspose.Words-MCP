@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
-**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.3.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
+**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.4.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
 
 ## Features
 
@@ -21,6 +21,7 @@
 - Bookmarks, hyperlinks
 - Watermarks (text/image)
 - Export as Base64 (DOCX, PDF, etc.)
+- Tagged-PDF export workflows that preserve custom node IDs through existing content and advanced export MCP tools
 - Render page to image (PNG, etc.)
 - In-memory document management: copy, save as, list, delete, merge
 
@@ -127,6 +128,7 @@ Sequence of tool calls (names match the server):
 4. `add_table_end` or `add_table_at_paragraph`
 5. `add_watermark_text` or `add_watermark_image_base64`
 6. `export_base64` (e.g., `fmt="pdf"`) — get file as Base64
+   - Use `export_base64_advanced` when running tagged-PDF workflows that preserve custom node IDs
 
 ## Integration with MCP Clients
 

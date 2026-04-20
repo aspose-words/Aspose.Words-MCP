@@ -14,6 +14,14 @@ def _png_1x1_b64():
     )
 
 
+def _has_struct_tree_root(pdf_bytes: bytes) -> bool:
+    return b'/StructTreeRoot' in pdf_bytes or b'/Type/StructTreeRoot' in pdf_bytes
+
+
+def _has_marked_true(pdf_bytes: bytes) -> bool:
+    return b'/MarkInfo<</Marked true>>' in pdf_bytes or b'/Marked true' in pdf_bytes
+
+
 @pytest.mark.parametrize(
     'fmt,expected_ext,expected_mime_prefix',
     [
@@ -74,6 +82,51 @@ def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
             assert out['mime'].startswith(expected_mime)
         else:
             assert out['mime'] == expected_mime
+
+
+def test_export_base64_advanced_pdf_tagged_control_shape_and_markers():
+    created = srv.tool_create_document('p0-adv-export-tagged-pdf.docx')
+    doc_id = created['docId']
+
+    srv.tool_add_heading(doc_id, 'Tagged PDF Validation', level=1, custom_node_id=1101)
+    srv.tool_add_paragraph(
+        doc_id,
+        'Paragraph for tagged structure verification.',
+        custom_node_id=2202,
+    )
+
+    default_pdf = srv.tool_export_base64_advanced(doc_id, fmt='pdf')
+    default_pdf_explicit_false = srv.tool_export_base64_advanced(
+        doc_id,
+        fmt='pdf',
+        tagged_pdf_preserve_custom_node_ids=False,
+    )
+    tagged_pdf = srv.tool_export_base64_advanced(
+        doc_id,
+        fmt='pdf',
+        tagged_pdf_preserve_custom_node_ids=True,
+    )
+
+    for export_out in (default_pdf, default_pdf_explicit_false, tagged_pdf):
+        assert set(export_out) == {'base64', 'mime', 'ext'}
+        assert export_out['ext'] == 'pdf'
+        assert export_out['mime'] == 'application/pdf'
+
+    default_pdf_bytes = base64.b64decode(default_pdf['base64'])
+    default_pdf_explicit_false_bytes = base64.b64decode(default_pdf_explicit_false['base64'])
+    tagged_pdf_bytes = base64.b64decode(tagged_pdf['base64'])
+
+    assert len(default_pdf_bytes) > 0
+    assert len(default_pdf_explicit_false_bytes) > 0
+    assert len(tagged_pdf_bytes) > 0
+
+    assert _has_struct_tree_root(default_pdf_bytes) is False
+    assert _has_marked_true(default_pdf_bytes) is False
+    assert _has_struct_tree_root(default_pdf_explicit_false_bytes) is False
+    assert _has_marked_true(default_pdf_explicit_false_bytes) is False
+
+    assert _has_struct_tree_root(tagged_pdf_bytes) is True
+    assert _has_marked_true(tagged_pdf_bytes) is True
 
 
 def test_bookmarks_and_hyperlinks():

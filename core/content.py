@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from io import BytesIO
+from pathlib import Path
 from typing import List, Optional
 
 import aspose.words as aw
@@ -15,6 +17,16 @@ from core.utils.docs_util import (
 )
 
 _MAX_REGEX_PATTERN_LENGTH = 256
+_CUSTOM_NODE_IDS_SIDECAR_SUFFIX = '.custom_node_ids.json'
+_ASPOSE_EVALUATION_EXACT_PARAGRAPHS = {
+    'evaluation only. created with aspose.words. copyright 2003-2026 aspose pty ltd.',
+    'this document was truncated here because it was created in the evaluation mode.',
+}
+_ASPOSE_EVALUATION_FOOTER_PREFIX = (
+    'created with an evaluation copy of aspose.words. to remove all limitations, '
+    'you can use free temporary license '
+)
+_ASPOSE_EVALUATION_FOOTER_SUFFIX = 'https://products.aspose.com/words/temporary-license/'
 _ALLOWED_REGEX_ESCAPES = {
     'd',
     'D',
@@ -41,6 +53,133 @@ _ALLOWED_REGEX_ESCAPES = {
     '+',
     '?',
 }
+
+
+def _custom_node_ids_sidecar_path(doc_path: Path) -> Path:
+    return doc_path.with_suffix(f'{doc_path.suffix}{_CUSTOM_NODE_IDS_SIDECAR_SUFFIX}')
+
+
+def _normalize_paragraph_text(paragraph_text: str) -> str:
+    return paragraph_text.rstrip('\r\n')
+
+
+def _is_evaluation_only_paragraph(paragraph_text: str) -> bool:
+    normalized_text = _normalize_paragraph_text(paragraph_text).strip().lower()
+    if normalized_text == '':
+        return False
+    if normalized_text in _ASPOSE_EVALUATION_EXACT_PARAGRAPHS:
+        return True
+    return normalized_text.startswith(
+        _ASPOSE_EVALUATION_FOOTER_PREFIX
+    ) and normalized_text.endswith(_ASPOSE_EVALUATION_FOOTER_SUFFIX)
+
+
+def _evaluation_paragraph_indices(paragraph_texts: list[str]) -> set[int]:
+    normalized_texts = [
+        _normalize_paragraph_text(paragraph_text).strip().lower()
+        for paragraph_text in paragraph_texts
+    ]
+    evaluation_indices: set[int] = set()
+
+    leading_index: Optional[int] = None
+    for index, normalized_text in enumerate(normalized_texts):
+        if normalized_text != '':
+            leading_index = index
+            break
+
+    if leading_index is not None:
+        leading_text = normalized_texts[leading_index]
+        if leading_text in _ASPOSE_EVALUATION_EXACT_PARAGRAPHS:
+            evaluation_indices.add(leading_index)
+
+    trailing_index = len(normalized_texts) - 1
+    while trailing_index >= 0:
+        trailing_text = normalized_texts[trailing_index]
+        if trailing_text == '':
+            trailing_index -= 1
+            continue
+
+        is_evaluation_footer = trailing_text.startswith(
+            _ASPOSE_EVALUATION_FOOTER_PREFIX
+        ) and trailing_text.endswith(_ASPOSE_EVALUATION_FOOTER_SUFFIX)
+        if trailing_text in _ASPOSE_EVALUATION_EXACT_PARAGRAPHS or is_evaluation_footer:
+            evaluation_indices.add(trailing_index)
+            trailing_index -= 1
+            continue
+
+        break
+
+    return evaluation_indices
+
+
+def _find_user_paragraph_ordinal(doc: aw.Document, paragraph_node: aw.Paragraph) -> int:
+    paragraph_nodes = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    paragraph_index = paragraph_nodes.index_of(paragraph_node)
+    if paragraph_index is None or paragraph_index < 0:
+        raise ValueError(
+            'Unable to resolve created paragraph ordinal for custom_node_id persistence'
+        )
+
+    paragraph_texts: list[str] = []
+    for index in range(paragraph_nodes.count):
+        paragraph = paragraph_nodes[index].as_paragraph()
+        paragraph_texts.append(paragraph.to_string(aw.SaveFormat.TEXT) or '')
+
+    evaluation_indices = _evaluation_paragraph_indices(paragraph_texts)
+
+    user_paragraph_ordinal = 0
+    for index in range(int(paragraph_index) + 1):
+        if index in evaluation_indices:
+            continue
+        user_paragraph_ordinal += 1
+
+    return user_paragraph_ordinal - 1
+
+
+def _build_custom_node_id_sidecar_entry(
+    doc: aw.Document,
+    paragraph_node: aw.Paragraph,
+    paragraph_text: str,
+    custom_node_id: int,
+) -> dict[str, int | str]:
+    user_paragraph_ordinal = _find_user_paragraph_ordinal(doc, paragraph_node)
+    sidecar_entry: dict[str, int | str] = {
+        'custom_node_id': int(custom_node_id),
+        'user_paragraph_ordinal': int(user_paragraph_ordinal),
+    }
+
+    normalized_text = _normalize_paragraph_text(paragraph_text)
+    if normalized_text != '':
+        sidecar_entry['normalized_text'] = normalized_text
+
+    return sidecar_entry
+
+
+def _persist_custom_node_id_sidecar(
+    doc_path: Path, doc_id: str, sidecar_entry: dict[str, int | str]
+) -> None:
+    sidecar_path = _custom_node_ids_sidecar_path(doc_path)
+    sidecar_data: dict[str, object]
+    if sidecar_path.exists():
+        sidecar_data = json.loads(sidecar_path.read_text(encoding='utf-8'))
+    else:
+        sidecar_data = {}
+
+    paragraph_custom_node_ids = sidecar_data.get('paragraph_custom_node_ids')
+    if not isinstance(paragraph_custom_node_ids, dict):
+        paragraph_custom_node_ids = {}
+
+    user_paragraph_ordinal = int(sidecar_entry['user_paragraph_ordinal'])
+    paragraph_custom_node_ids[str(user_paragraph_ordinal)] = sidecar_entry
+
+    sidecar_payload = {
+        'doc_id': doc_id,
+        'paragraph_custom_node_ids': paragraph_custom_node_ids,
+    }
+    sidecar_path.write_text(
+        json.dumps(sidecar_payload, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding='utf-8',
+    )
 
 
 def validate_regex_pattern(pattern: str) -> None:
@@ -386,12 +525,14 @@ def add_heading(
     border_bottom: Optional[bool] = None,
     where: str = 'end',
     paragraph_index: Optional[int] = None,
+    custom_node_id: Optional[int] = None,
 ) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
     builder = aw.DocumentBuilder(doc)
     move_builder(doc, builder, where, paragraph_index)
     builder.insert_paragraph()
+    paragraph_with_written_text = builder.current_paragraph
     style_id = resolve_heading_style_identifier(level)
     builder.paragraph_format.style_identifier = style_id
     builder.paragraph_format.outline_level = resolve_outline_level(level)
@@ -405,8 +546,22 @@ def add_heading(
         builder.font.italic = italic
     if border_bottom:
         builder.paragraph_format.borders.bottom.line_style = aw.LineStyle.SINGLE
+    if custom_node_id is not None:
+        paragraph_with_written_text.custom_node_id = int(custom_node_id)
     builder.writeln(text or '')
+
+    sidecar_entry: Optional[dict[str, int | str]] = None
+    if custom_node_id is not None:
+        sidecar_entry = _build_custom_node_id_sidecar_entry(
+            doc,
+            paragraph_with_written_text,
+            text or '',
+            int(custom_node_id),
+        )
+
     doc.save(str(path))
+    if sidecar_entry is not None:
+        _persist_custom_node_id_sidecar(path, doc_id, sidecar_entry)
     return True
 
 
@@ -421,6 +576,7 @@ def add_paragraph(
     color_hex: Optional[str] = None,
     where: str = 'end',
     paragraph_index: Optional[int] = None,
+    custom_node_id: Optional[int] = None,
 ) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -441,8 +597,22 @@ def add_paragraph(
     col = hex_to_color(color_hex)
     if col is not None:
         builder.font.color = col
+    paragraph_with_written_text = builder.current_paragraph
     builder.writeln(text or '')
+
+    sidecar_entry: Optional[dict[str, int | str]] = None
+    if custom_node_id is not None:
+        paragraph_with_written_text.custom_node_id = int(custom_node_id)
+        sidecar_entry = _build_custom_node_id_sidecar_entry(
+            doc,
+            paragraph_with_written_text,
+            text or '',
+            int(custom_node_id),
+        )
+
     doc.save(str(path))
+    if sidecar_entry is not None:
+        _persist_custom_node_id_sidecar(path, doc_id, sidecar_entry)
     return True
 
 

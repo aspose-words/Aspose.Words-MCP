@@ -101,6 +101,7 @@ def tool_add_heading(
     bold: Optional[bool] = None,
     italic: Optional[bool] = None,
     border_bottom: Optional[bool] = None,
+    custom_node_id: Optional[int] = None,
 ):
     _content.add_heading(
         doc_id=doc_id,
@@ -111,6 +112,7 @@ def tool_add_heading(
         bold=bold,
         italic=italic,
         border_bottom=border_bottom,
+        custom_node_id=custom_node_id,
     )
     return {}
 
@@ -124,6 +126,7 @@ def tool_add_paragraph(
     bold: Optional[bool] = None,
     italic: Optional[bool] = None,
     color: Optional[str] = None,
+    custom_node_id: Optional[int] = None,
 ):
     _content.add_paragraph(
         doc_id=doc_id,
@@ -134,6 +137,7 @@ def tool_add_paragraph(
         bold=bold,
         italic=italic,
         color_hex=color,
+        custom_node_id=custom_node_id,
     )
     return {}
 
@@ -558,8 +562,17 @@ def tool_render_page_base64(doc_id: str, page_index: int = 0, fmt: str = 'png', 
     return {'base64': b64, 'mime': mime, 'ext': ext}
 
 
-def tool_export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):
-    data, mime, ext = _export.export_advanced(doc_id, fmt=fmt, options=options)
+def tool_export_base64_advanced(
+    doc_id: str,
+    fmt: str,
+    options: Optional[dict] = None,
+    tagged_pdf_preserve_custom_node_ids: Optional[bool] = None,
+):
+    export_options = options
+    if tagged_pdf_preserve_custom_node_ids is not None:
+        export_options = dict(options or {})
+        export_options['export_document_structure'] = bool(tagged_pdf_preserve_custom_node_ids)
+    data, mime, ext = _export.export_advanced(doc_id, fmt=fmt, options=export_options)
     b64 = base64.b64encode(data).decode('utf-8')
     return {'base64': b64, 'mime': mime, 'ext': ext}
 
@@ -1045,6 +1058,7 @@ def register_tools() -> None:
         bold: Optional[bool] = None,
         italic: Optional[bool] = None,
         border_bottom: Optional[bool] = None,
+        custom_node_id: Optional[int] = None,
     ):
         return tool_add_heading(
             doc_id,
@@ -1055,6 +1069,7 @@ def register_tools() -> None:
             bold=bold,
             italic=italic,
             border_bottom=border_bottom,
+            custom_node_id=custom_node_id,
         )
 
     @mcp.tool(description='Add a paragraph with optional style and formatting')
@@ -1067,6 +1082,7 @@ def register_tools() -> None:
         bold: Optional[bool] = None,
         italic: Optional[bool] = None,
         color: Optional[str] = None,
+        custom_node_id: Optional[int] = None,
     ):
         return tool_add_paragraph(
             doc_id,
@@ -1077,6 +1093,7 @@ def register_tools() -> None:
             bold=bold,
             italic=italic,
             color=color,
+            custom_node_id=custom_node_id,
         )
 
     @mcp.tool(description='Insert a page break at the end of the document')
@@ -1718,8 +1735,18 @@ def register_tools() -> None:
         return tool_render_page_base64(doc_id, page_index=page_index, fmt=fmt, dpi=dpi)
 
     @mcp.tool(description='Advanced export with additional format options')
-    def export_base64_advanced(doc_id: str, fmt: str, options: Optional[dict] = None):
-        return tool_export_base64_advanced(doc_id, fmt=fmt, options=options)
+    def export_base64_advanced(
+        doc_id: str,
+        fmt: str,
+        options: Optional[dict] = None,
+        tagged_pdf_preserve_custom_node_ids: Optional[bool] = None,
+    ):
+        return tool_export_base64_advanced(
+            doc_id,
+            fmt=fmt,
+            options=options,
+            tagged_pdf_preserve_custom_node_ids=tagged_pdf_preserve_custom_node_ids,
+        )
 
     return None
 

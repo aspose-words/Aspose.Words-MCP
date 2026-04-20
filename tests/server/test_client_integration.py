@@ -39,6 +39,14 @@ def _runtime_docx_path(doc_id):
     return Path(docs_data_dir) / f'{doc_id}.docx'
 
 
+def _has_struct_tree_root(pdf_bytes):
+    return b'/StructTreeRoot' in pdf_bytes or b'/Type/StructTreeRoot' in pdf_bytes
+
+
+def _has_marked_true(pdf_bytes):
+    return b'/MarkInfo<</Marked true>>' in pdf_bytes or b'/Marked true' in pdf_bytes
+
+
 def _set_adjacent_same_format_runs(doc_id, marker_text):
     doc_path = _runtime_docx_path(doc_id)
     document = aw.Document(str(doc_path))
@@ -436,6 +444,65 @@ def test_add_heading_and_get_outline(mcp_client_config, result_file_path):
     _run_and_assert_file(result_file_path, run_client)
 
 
+def test_add_heading_and_paragraph_with_custom_node_id(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+
+            heading_text = 'Heading custom node id marker'
+            paragraph_text = 'Paragraph custom node id marker'
+
+            add_heading_response = await client.call_tool(
+                name='add_heading',
+                arguments={
+                    'doc_id': doc_id,
+                    'text': heading_text,
+                    'level': 2,
+                    'custom_node_id': 1101,
+                },
+            )
+            assert hasattr(add_heading_response, 'data')
+            assert hasattr(add_heading_response, 'structured_content')
+            assert add_heading_response.structured_content == {}
+            assert add_heading_response.data is None or add_heading_response.data == {}
+
+            add_paragraph_response = await client.call_tool(
+                name='add_paragraph',
+                arguments={
+                    'doc_id': doc_id,
+                    'text': paragraph_text,
+                    'custom_node_id': 2202,
+                },
+            )
+            assert hasattr(add_paragraph_response, 'data')
+            assert hasattr(add_paragraph_response, 'structured_content')
+            assert add_paragraph_response.structured_content == {}
+            assert add_paragraph_response.data is None or add_paragraph_response.data == {}
+
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+            exported_document = aw.Document(str(result_file_path))
+            exported_paragraph_nodes = exported_document.get_child_nodes(
+                aw.NodeType.PARAGRAPH, True
+            )
+
+            exported_heading_paragraph = None
+            exported_body_paragraph = None
+
+            for paragraph_index in range(exported_paragraph_nodes.count):
+                paragraph = exported_paragraph_nodes[paragraph_index].as_paragraph()
+                paragraph_text_content = paragraph.to_string(aw.SaveFormat.TEXT)
+                if heading_text in paragraph_text_content:
+                    exported_heading_paragraph = paragraph
+                if paragraph_text in paragraph_text_content:
+                    exported_body_paragraph = paragraph
+
+            assert exported_heading_paragraph is not None
+            assert exported_body_paragraph is not None
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
 def test_find_text(mcp_client_config, result_file_path):
     async def run_client():
         async with _client_session(mcp_client_config) as client:
@@ -601,6 +668,74 @@ def test_export_base64_advanced_pdf_text_shaping(mcp_client_config, result_file_
 
             with open(result_file_path, 'wb') as f:
                 f.write(decoded_shaped_pdf_bytes)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_export_base64_advanced_pdf_tagged_custom_node_id_control(
+    mcp_client_config, result_file_path
+):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='add_heading',
+                arguments={
+                    'doc_id': doc_id,
+                    'text': 'Tagged PDF heading marker',
+                    'level': 1,
+                    'custom_node_id': 3101,
+                },
+            )
+            await client.call_tool(
+                name='add_paragraph',
+                arguments={
+                    'doc_id': doc_id,
+                    'text': 'Tagged PDF paragraph marker',
+                    'custom_node_id': 3202,
+                },
+            )
+
+            pdf_default_export = await client.call_tool(
+                name='export_base64_advanced',
+                arguments={'doc_id': doc_id, 'fmt': 'pdf'},
+            )
+            assert hasattr(pdf_default_export, 'data')
+            assert isinstance(pdf_default_export.data, dict)
+            assert set(pdf_default_export.data.keys()) == {'base64', 'mime', 'ext'}
+            assert pdf_default_export.data['ext'] == 'pdf'
+            assert pdf_default_export.data['mime'] == 'application/pdf'
+
+            decoded_default_pdf_bytes = base64.b64decode(pdf_default_export.data['base64'])
+            assert isinstance(decoded_default_pdf_bytes, (bytes, bytearray))
+            assert len(decoded_default_pdf_bytes) > 0
+
+            pdf_tagged_export = await client.call_tool(
+                name='export_base64_advanced',
+                arguments={
+                    'doc_id': doc_id,
+                    'fmt': 'pdf',
+                    'tagged_pdf_preserve_custom_node_ids': True,
+                },
+            )
+            assert hasattr(pdf_tagged_export, 'data')
+            assert isinstance(pdf_tagged_export.data, dict)
+            assert set(pdf_tagged_export.data.keys()) == {'base64', 'mime', 'ext'}
+            assert pdf_tagged_export.data['ext'] == 'pdf'
+            assert pdf_tagged_export.data['mime'] == 'application/pdf'
+
+            decoded_tagged_pdf_bytes = base64.b64decode(pdf_tagged_export.data['base64'])
+            assert isinstance(decoded_tagged_pdf_bytes, (bytes, bytearray))
+            assert len(decoded_tagged_pdf_bytes) > 0
+
+            assert _has_struct_tree_root(decoded_default_pdf_bytes) is False
+            assert _has_marked_true(decoded_default_pdf_bytes) is False
+
+            assert _has_struct_tree_root(decoded_tagged_pdf_bytes) is True
+            assert _has_marked_true(decoded_tagged_pdf_bytes) is True
+
+            with open(result_file_path, 'wb') as file_handle:
+                file_handle.write(decoded_tagged_pdf_bytes)
 
     _run_and_assert_file(result_file_path, run_client)
 

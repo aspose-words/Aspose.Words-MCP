@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 pytest.importorskip('aspose.words')
@@ -142,6 +144,237 @@ def _paragraph_with_marker(doc_id: str, marker_text: str) -> aw.Paragraph:
         if marker_text in paragraph_text:
             return paragraph
     raise AssertionError(f'Paragraph with marker not found: {marker_text}')
+
+
+def _paragraph_with_exact_text(doc_id: str, expected_text: str) -> aw.Paragraph:
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    paragraph_nodes = document.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    for paragraph_index in range(paragraph_nodes.count):
+        paragraph = paragraph_nodes[paragraph_index].as_paragraph()
+        paragraph_text = paragraph.to_string(aw.SaveFormat.TEXT).strip()
+        if paragraph_text == expected_text:
+            return paragraph
+    raise AssertionError(f'Paragraph with text not found: {expected_text}')
+
+
+_ASPOSE_EVALUATION_EXACT_PARAGRAPHS = {
+    'evaluation only. created with aspose.words. copyright 2003-2026 aspose pty ltd.',
+    'this document was truncated here because it was created in the evaluation mode.',
+}
+_ASPOSE_EVALUATION_FOOTER_PREFIX = (
+    'created with an evaluation copy of aspose.words. to remove all limitations, '
+    'you can use free temporary license '
+)
+_ASPOSE_EVALUATION_FOOTER_SUFFIX = 'https://products.aspose.com/words/temporary-license/'
+
+
+def _is_evaluation_only_paragraph(paragraph_text: str) -> bool:
+    normalized_text = paragraph_text.rstrip('\r\n').strip().lower()
+    if normalized_text == '':
+        return False
+    if normalized_text in _ASPOSE_EVALUATION_EXACT_PARAGRAPHS:
+        return True
+    return normalized_text.startswith(
+        _ASPOSE_EVALUATION_FOOTER_PREFIX
+    ) and normalized_text.endswith(_ASPOSE_EVALUATION_FOOTER_SUFFIX)
+
+
+def _user_paragraph_ordinal_with_exact_text(doc_id: str, expected_text: str) -> int:
+    expected_normalized_text = expected_text.rstrip('\r\n')
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    paragraph_nodes = document.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    matching_ordinals: list[int] = []
+    user_paragraph_ordinal = 0
+    for paragraph_index in range(paragraph_nodes.count):
+        paragraph = paragraph_nodes[paragraph_index].as_paragraph()
+        paragraph_text = paragraph.to_string(aw.SaveFormat.TEXT) or ''
+        if _is_evaluation_only_paragraph(paragraph_text):
+            continue
+        if paragraph_text.rstrip('\r\n') == expected_normalized_text:
+            matching_ordinals.append(user_paragraph_ordinal)
+        user_paragraph_ordinal += 1
+    if matching_ordinals:
+        if expected_normalized_text == '' and len(matching_ordinals) > 1:
+            return matching_ordinals[-2]
+        return matching_ordinals[-1]
+    raise AssertionError(f'Paragraph with text not found: {expected_text}')
+
+
+def _custom_node_id_sidecar_payload(doc_id: str) -> dict[str, object] | None:
+    doc_path = _docs.ensure_path(doc_id)
+    sidecar_path = doc_path.with_suffix(f'{doc_path.suffix}.custom_node_ids.json')
+    if not sidecar_path.exists():
+        return None
+    return json.loads(sidecar_path.read_text(encoding='utf-8'))
+
+
+def _assert_single_sidecar_custom_node_entry(
+    doc_id: str, expected_text: str, expected_custom_node_id: int
+) -> None:
+    sidecar_payload = _custom_node_id_sidecar_payload(doc_id)
+    assert sidecar_payload is not None
+    assert sidecar_payload.get('doc_id') == doc_id
+    paragraph_custom_node_ids = sidecar_payload.get('paragraph_custom_node_ids')
+    assert isinstance(paragraph_custom_node_ids, dict)
+    assert len(paragraph_custom_node_ids) == 1
+
+    expected_user_paragraph_ordinal = _user_paragraph_ordinal_with_exact_text(doc_id, expected_text)
+    sidecar_record = paragraph_custom_node_ids.get(str(expected_user_paragraph_ordinal))
+    assert isinstance(sidecar_record, dict)
+    assert sidecar_record.get('custom_node_id') == expected_custom_node_id
+    assert sidecar_record.get('user_paragraph_ordinal') == expected_user_paragraph_ordinal
+
+
+def _assert_single_sidecar_custom_node_entry_with_empty_text(
+    doc_id: str, expected_custom_node_id: int
+) -> None:
+    sidecar_payload = _custom_node_id_sidecar_payload(doc_id)
+    assert sidecar_payload is not None
+    assert sidecar_payload.get('doc_id') == doc_id
+    paragraph_custom_node_ids = sidecar_payload.get('paragraph_custom_node_ids')
+    assert isinstance(paragraph_custom_node_ids, dict)
+    assert len(paragraph_custom_node_ids) == 1
+
+    _, sidecar_record = next(iter(paragraph_custom_node_ids.items()))
+    assert isinstance(sidecar_record, dict)
+    assert sidecar_record.get('custom_node_id') == expected_custom_node_id
+    user_paragraph_ordinal = sidecar_record.get('user_paragraph_ordinal')
+    assert isinstance(user_paragraph_ordinal, int)
+
+
+def _paragraph_counts(doc_id: str) -> tuple[int, int]:
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    paragraph_nodes = document.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    blank_paragraph_count = 0
+    for paragraph_index in range(paragraph_nodes.count):
+        paragraph = paragraph_nodes[paragraph_index].as_paragraph()
+        if paragraph.to_string(aw.SaveFormat.TEXT).strip() == '':
+            blank_paragraph_count += 1
+    return paragraph_nodes.count, blank_paragraph_count
+
+
+def test_add_heading_with_custom_node_id_applies_id_to_written_heading_paragraph():
+    doc_id = srv.tool_create_document('heading-custom-node-id.docx')['docId']
+
+    add_heading_response = srv.tool_add_heading(
+        doc_id,
+        'Heading with custom node id',
+        level=2,
+        custom_node_id=1101,
+    )
+
+    assert add_heading_response == {}
+    _assert_single_sidecar_custom_node_entry(
+        doc_id,
+        'Heading with custom node id',
+        expected_custom_node_id=1101,
+    )
+
+
+def test_add_paragraph_with_custom_node_id_applies_id_without_extra_blank_paragraphs():
+    with_custom_node_id_doc_id = srv.tool_create_document('paragraph-custom-node-id.docx')['docId']
+    without_custom_node_id_doc_id = srv.tool_create_document('paragraph-default-node-id.docx')[
+        'docId'
+    ]
+
+    add_paragraph_response = srv.tool_add_paragraph(
+        with_custom_node_id_doc_id,
+        'Paragraph with custom node id',
+        custom_node_id=2202,
+    )
+    srv.tool_add_paragraph(without_custom_node_id_doc_id, 'Paragraph with default node id')
+
+    assert add_paragraph_response == {}
+    _assert_single_sidecar_custom_node_entry(
+        with_custom_node_id_doc_id,
+        'Paragraph with custom node id',
+        expected_custom_node_id=2202,
+    )
+
+    custom_path_counts = _paragraph_counts(with_custom_node_id_doc_id)
+    default_path_counts = _paragraph_counts(without_custom_node_id_doc_id)
+    assert custom_path_counts == default_path_counts
+
+
+def test_add_heading_with_empty_text_custom_node_id_indexes_written_blank_paragraph():
+    doc_id = srv.tool_create_document('heading-empty-custom-node-id.docx')['docId']
+
+    add_heading_response = srv.tool_add_heading(doc_id, '', level=1, custom_node_id=3303)
+
+    assert add_heading_response == {}
+    _assert_single_sidecar_custom_node_entry_with_empty_text(doc_id, expected_custom_node_id=3303)
+
+
+def test_add_paragraph_with_empty_text_custom_node_id_indexes_written_blank_paragraph():
+    doc_id = srv.tool_create_document('paragraph-empty-custom-node-id.docx')['docId']
+
+    add_paragraph_response = srv.tool_add_paragraph(doc_id, '', custom_node_id=4404)
+
+    assert add_paragraph_response == {}
+    _assert_single_sidecar_custom_node_entry_with_empty_text(doc_id, expected_custom_node_id=4404)
+
+
+def test_add_paragraph_with_evaluation_marker_phrase_preserves_custom_node_id_sidecar_entry():
+    doc_id = srv.tool_create_document('paragraph-evaluation-marker-phrase.docx')['docId']
+    paragraph_text = (
+        'User-authored note: created with an evaluation copy of aspose.words '
+        'is included here as quoted content.'
+    )
+
+    add_paragraph_response = srv.tool_add_paragraph(doc_id, paragraph_text, custom_node_id=5505)
+
+    assert add_paragraph_response == {}
+    sidecar_payload = _custom_node_id_sidecar_payload(doc_id)
+    assert sidecar_payload is not None
+    paragraph_custom_node_ids = sidecar_payload.get('paragraph_custom_node_ids')
+    assert isinstance(paragraph_custom_node_ids, dict)
+    assert len(paragraph_custom_node_ids) == 1
+
+    _, sidecar_record = next(iter(paragraph_custom_node_ids.items()))
+    assert isinstance(sidecar_record, dict)
+    assert sidecar_record.get('custom_node_id') == 5505
+    user_paragraph_ordinal = sidecar_record.get('user_paragraph_ordinal')
+    assert isinstance(user_paragraph_ordinal, int)
+
+    doc_path = _docs.ensure_path(doc_id)
+    document = aw.Document(str(doc_path))
+    paragraph_nodes = document.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    user_paragraph_texts: list[str] = []
+    for paragraph_index in range(paragraph_nodes.count):
+        paragraph = paragraph_nodes[paragraph_index].as_paragraph()
+        current_text = paragraph.to_string(aw.SaveFormat.TEXT).rstrip('\r\n')
+        if _is_evaluation_only_paragraph(current_text):
+            continue
+        user_paragraph_texts.append(current_text)
+
+    assert 0 <= user_paragraph_ordinal < len(user_paragraph_texts)
+    assert user_paragraph_texts[user_paragraph_ordinal] == paragraph_text
+
+
+def test_omitting_custom_node_id_keeps_default_node_id_behavior_for_created_paragraphs():
+    doc_id = srv.tool_create_document('default-custom-node-id-behavior.docx')['docId']
+
+    add_heading_response = srv.tool_add_heading(doc_id, 'Default node id heading', level=1)
+    add_paragraph_response = srv.tool_add_paragraph(doc_id, 'Default node id paragraph')
+
+    assert add_heading_response == {}
+    assert add_paragraph_response == {}
+
+    heading_paragraph = _paragraph_with_exact_text(doc_id, 'Default node id heading')
+    body_paragraph = _paragraph_with_exact_text(doc_id, 'Default node id paragraph')
+    assert heading_paragraph.custom_node_id == 0
+    assert body_paragraph.custom_node_id == 0
+
+    sidecar_payload = _custom_node_id_sidecar_payload(doc_id)
+    if sidecar_payload is None:
+        assert sidecar_payload is None
+    else:
+        assert sidecar_payload.get('doc_id') == doc_id
+        paragraph_custom_node_ids = sidecar_payload.get('paragraph_custom_node_ids')
+        assert paragraph_custom_node_ids in (None, {})
 
 
 def test_near_text_insertions_and_lists():
