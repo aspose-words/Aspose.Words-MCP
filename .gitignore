@@ -15,6 +15,7 @@ venv/
 .env.*
 /tests/data/
 /.qodana/
+/.idea/
 /.opencode/
 /.swarm/
 /data/
