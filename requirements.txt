@@ -1,5 +1,5 @@
 fastmcp
-aspose-words==26.3.0
+aspose-words==26.4.0
 build
 pytest
 ruff>=0.11.0

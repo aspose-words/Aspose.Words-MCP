@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.4.0] - 2026-04-30
+### Changed
+- Aligned server versioning with Aspose.Words 26.4.0.
+
+### Skipped
+- No new or changed public API was documented in the 26.4.0 release notes "Public API and Backward Incompatible Changes" section. All 55 items in the release are internal bug fixes and rendering improvements (PDF logical structure, funnel chart data labels, leader line rendering, axis title locale IDs) that do not introduce new public API surface for the MCP server to expose.
+
 ## [26.3.0] - 2026-04-04
 ### Added
 - Exposed opt-in run joining through the existing text replacement MCP surface.
