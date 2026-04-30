@@ -1,4 +1,5 @@
 import os
+import multiprocessing
 import shutil
 import tempfile
 from pathlib import Path
@@ -8,6 +9,9 @@ from fastmcp.utilities.tests import run_server_in_process
 
 import mcp_server as srv
 from core.utils.docs_util import init_data_dir
+
+
+multiprocessing.set_start_method('spawn', force=True)
 
 _TEMP_DIR: Path
 _DATA_DIR: Path

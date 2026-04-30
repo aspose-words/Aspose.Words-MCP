@@ -5,6 +5,35 @@ from typing import Any, Dict, List, Optional
 import aspose.words as aw
 
 
+def _estimated_page_count(doc: aw.Document, paragraph_count: int) -> int:
+    if paragraph_count <= 0:
+        return 0
+
+    pages = 1
+    page_break_char = getattr(aw.ControlChar, 'PAGE_BREAK_CHAR', '\f')
+    section_page_starts = {
+        aw.SectionStart.NEW_PAGE,
+        aw.SectionStart.EVEN_PAGE,
+        aw.SectionStart.ODD_PAGE,
+    }
+    text = doc.get_text() or ''
+    pages += text.count(page_break_char)
+
+    sections = doc.sections
+    for i in range(sections.count):
+        section = sections[i]
+        if i > 0 and section.page_setup.section_start in section_page_starts:
+            pages += 1
+
+    paragraphs = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    for i in range(paragraphs.count):
+        paragraph = paragraphs[i].as_paragraph()
+        if paragraph.paragraph_format.page_break_before:
+            pages += 1
+
+    return pages
+
+
 def _docs():
     from core.utils import docs_util as _d
 
@@ -71,12 +100,6 @@ def get_xml(doc_id: str) -> str:
 def get_outline(doc_id: str):
     path = _docs().ensure_path(doc_id)
     doc = aw.Document(str(path))
-    doc.update_page_layout()
-    doc.update_fields()
-    buf = BytesIO()
-    doc.save(buf, aw.SaveFormat.DOCX)
-    buf.seek(0)
-    doc = aw.Document(buf)
     nodes = _docs().get_paragraph_nodes(doc)
     items: List[Dict[str, Any]] = []
     heading_map: Dict[Any, int] = {
@@ -127,7 +150,7 @@ def get_info(doc_id: str) -> Dict[str, Any]:
     text = doc.get_text()
     words = len([w for w in (text or '').split() if w])
     paragraphs = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True).count
-    pages = doc.page_count
+    pages = _estimated_page_count(doc, paragraphs)
     size = path.stat().st_size
     return {
         'sizeBytes': int(size),
@@ -143,7 +166,7 @@ def stats(doc_id: str) -> Dict[str, int]:
     text = doc.get_text()
     words = len([w for w in (text or '').split() if w])
     paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True).count
-    pages = doc.page_count
+    pages = _estimated_page_count(doc, paras)
     return {'words': int(words), 'paragraphs': int(paras), 'pages': int(pages)}
 
 

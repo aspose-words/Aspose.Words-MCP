@@ -48,6 +48,7 @@ def test_page_break_positions_via_manager():
     srv.tool_add_page_break_at_paragraph(doc_id, paragraph_index=0)
     info = srv.tool_get_info(doc_id)
     assert info['paragraphs'] >= 1
+    assert info['pages'] >= 2
 
 
 def test_add_page_break_via_tool():
