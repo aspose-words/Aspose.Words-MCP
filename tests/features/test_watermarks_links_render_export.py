@@ -1,10 +1,14 @@
 import base64
 import json
+from pathlib import Path
 
 import pytest
 
 pytest.importorskip('aspose.words')
+import aspose.words as aw
+
 import mcp_server as srv
+from core.utils.docs_util import ensure_path
 
 
 def _png_1x1_b64():
@@ -87,3 +91,147 @@ def test_bookmarks_and_hyperlinks():
     xml = srv.tool_get_xml(did)['xml']
     assert 'BM_TEST' in xml
     assert 'example.com' in xml
+
+
+def _write_custom_node_id_sidecar(doc_id: str, payload: str) -> Path:
+    doc_path = ensure_path(doc_id)
+    sidecar_path = doc_path.with_suffix('.custom_node_id.json')
+    sidecar_path.write_text(payload, encoding='utf-8')
+    return sidecar_path
+
+
+def test_export_pdf_rejects_malformed_custom_node_id_sidecar_json():
+    r = srv.tool_create_document('p0-pdf-bad-sidecar-json.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Alpha')
+
+    _write_custom_node_id_sidecar(did, '{"kind": "paragraph"')
+
+    with pytest.raises(json.JSONDecodeError):
+        srv.tool_export_base64_advanced(did, fmt='pdf')
+
+
+def test_export_pdf_rejects_invalid_custom_node_id_record_fields():
+    r = srv.tool_create_document('p0-pdf-invalid-record-fields.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Alpha')
+
+    _write_custom_node_id_sidecar(
+        did,
+        json.dumps(
+            [
+                {
+                    'kind': 'paragraph',
+                    'paragraph_index': '0',
+                    'expected_text': 'Alpha',
+                    'custom_node_id': 7,
+                }
+            ]
+        ),
+    )
+
+    with pytest.raises(ValueError, match='paragraph_index .* must be an integer'):
+        srv.tool_export_base64_advanced(did, fmt='pdf')
+
+
+def test_export_pdf_rejects_ambiguous_custom_node_id_paragraph_resolution():
+    r = srv.tool_create_document('p0-pdf-ambiguous-resolution.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Duplicate')
+    srv.tool_add_paragraph(did, 'Spacer')
+    srv.tool_add_paragraph(did, 'Duplicate')
+
+    _write_custom_node_id_sidecar(
+        did,
+        json.dumps(
+            [
+                {
+                    'kind': 'paragraph',
+                    'paragraph_index': 2,
+                    'expected_text': 'Duplicate',
+                    'custom_node_id': 7,
+                }
+            ]
+        ),
+    )
+
+    with pytest.raises(ValueError, match='multiple text matches found'):
+        srv.tool_export_base64_advanced(did, fmt='pdf')
+
+
+def test_export_pdf_rejects_oversized_custom_node_id_assignment():
+    r = srv.tool_create_document('p0-pdf-oversized-custom-node-id.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Alpha')
+
+    _write_custom_node_id_sidecar(
+        did,
+        json.dumps(
+            [
+                {
+                    'kind': 'paragraph',
+                    'paragraph_index': 0,
+                    'expected_text': 'Alpha',
+                    'custom_node_id': 2**65,
+                }
+            ]
+        ),
+    )
+
+    with pytest.raises((OverflowError, RuntimeError, ValueError)):
+        srv.tool_export_base64_advanced(did, fmt='pdf')
+
+
+def test_export_pdf_rejects_duplicate_paragraph_claims_in_sidecar_mapping():
+    r = srv.tool_create_document('p0-pdf-duplicate-paragraph-claims.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Alpha')
+
+    _write_custom_node_id_sidecar(
+        did,
+        json.dumps(
+            [
+                {
+                    'kind': 'paragraph',
+                    'paragraph_index': 0,
+                    'expected_text': 'Alpha',
+                    'custom_node_id': 7,
+                },
+                {
+                    'kind': 'paragraph',
+                    'paragraph_index': 0,
+                    'expected_text': 'Alpha',
+                    'custom_node_id': 9,
+                },
+            ]
+        ),
+    )
+
+    with pytest.raises(ValueError, match='no text match found'):
+        srv.tool_export_base64_advanced(did, fmt='pdf')
+
+
+def test_export_pdf_applies_persisted_paragraph_custom_node_id_and_emits_marker(monkeypatch):
+    original_build_pdf_opts = srv._export.build_pdf_opts
+
+    def _build_pdf_opts_without_text_compression(options):
+        pdf_opts = original_build_pdf_opts(options)
+        pdf_opts.text_compression = aw.saving.PdfTextCompression.NONE
+        pdf_opts.export_document_structure = True
+        return pdf_opts
+
+    monkeypatch.setattr(
+        srv._export,
+        'build_pdf_opts',
+        _build_pdf_opts_without_text_compression,
+    )
+
+    r = srv.tool_create_document('p0-pdf-custom-node-id-positive.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Paragraph with exported custom node id marker')
+    srv.tool_set_paragraph_custom_node_id(did, paragraph_index=0, custom_node_id=4242)
+
+    out = srv.tool_export_base64_advanced(did, fmt='pdf')
+    pdf_data = base64.b64decode(out['base64'])
+
+    assert b'XXAsposeWords/CustomId' in pdf_data

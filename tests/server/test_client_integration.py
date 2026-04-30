@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import aspose.words as aw
+import pytest
 from fastmcp import Client
 
 
@@ -472,6 +473,86 @@ def test_delete_paragraph(mcp_client_config, result_file_path):
             assert hasattr(resp, 'data')
             assert isinstance(resp.data, dict)
             assert 'paragraphs' in resp.data
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_set_paragraph_custom_node_id_contract(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='add_paragraph',
+                arguments={'doc_id': doc_id, 'text': 'Paragraph custom node id target'},
+            )
+
+            paragraph_listing_response = await client.call_tool(
+                name='read_paragraphs', arguments={'doc_id': doc_id}
+            )
+            assert hasattr(paragraph_listing_response, 'data')
+            assert isinstance(paragraph_listing_response.data, dict)
+            assert 'paragraphs' in paragraph_listing_response.data
+            paragraphs = paragraph_listing_response.data['paragraphs']
+            assert isinstance(paragraphs, list)
+
+            target_text = 'Paragraph custom node id target'
+            target_paragraph_index = next(
+                (
+                    paragraph_index
+                    for paragraph_index, paragraph_text in enumerate(paragraphs)
+                    if isinstance(paragraph_text, str) and target_text in paragraph_text
+                ),
+                None,
+            )
+            assert target_paragraph_index is not None
+            target_paragraph_text = paragraphs[target_paragraph_index]
+            assert isinstance(target_paragraph_text, str)
+
+            set_custom_node_id_response = await client.call_tool(
+                name='set_paragraph_custom_node_id',
+                arguments={
+                    'doc_id': doc_id,
+                    'paragraph_index': target_paragraph_index,
+                    'custom_node_id': 4242,
+                },
+            )
+            assert hasattr(set_custom_node_id_response, 'data')
+            assert set_custom_node_id_response.data is None
+            assert hasattr(set_custom_node_id_response, 'structured_content')
+            assert set_custom_node_id_response.structured_content == {}
+            assert hasattr(set_custom_node_id_response, 'content')
+            assert isinstance(set_custom_node_id_response.content, list)
+            assert len(set_custom_node_id_response.content) == 1
+            assert set_custom_node_id_response.content[0].text == '{}'
+            assert hasattr(set_custom_node_id_response, 'is_error')
+            assert set_custom_node_id_response.is_error is False
+
+            custom_node_id_sidecar_path = _runtime_docx_path(doc_id).with_suffix(
+                '.custom_node_id.json'
+            )
+            assert custom_node_id_sidecar_path.exists()
+            with custom_node_id_sidecar_path.open('r', encoding='utf-8') as sidecar_file:
+                sidecar_records = json.load(sidecar_file)
+            assert sidecar_records == [
+                {
+                    'kind': 'paragraph',
+                    'paragraph_index': target_paragraph_index,
+                    'expected_text': target_paragraph_text,
+                    'custom_node_id': 4242,
+                }
+            ]
+
+            with pytest.raises(Exception, match='paragraph_index out of range'):
+                await client.call_tool(
+                    name='set_paragraph_custom_node_id',
+                    arguments={
+                        'doc_id': doc_id,
+                        'paragraph_index': 99,
+                        'custom_node_id': 1337,
+                    },
+                )
+
             await _save_exported_to_file(result_file_path, client, doc_id)
 
     _run_and_assert_file(result_file_path, run_client)

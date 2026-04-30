@@ -257,6 +257,15 @@ def tool_delete_paragraph(doc_id: str, paragraph_index: int):
     return {}
 
 
+def tool_set_paragraph_custom_node_id(doc_id: str, paragraph_index: int, custom_node_id: int):
+    _content.set_paragraph_custom_node_id(
+        doc_id=doc_id,
+        paragraph_index=paragraph_index,
+        custom_node_id=custom_node_id,
+    )
+    return {}
+
+
 def tool_create_style(
     doc_id: str,
     style_name: str,
@@ -1108,6 +1117,10 @@ def register_tools() -> None:
     @mcp.tool(description='Delete a paragraph by index')
     def delete_paragraph(doc_id: str, paragraph_index: int):
         return tool_delete_paragraph(doc_id, paragraph_index)
+
+    @mcp.tool(description='Set a custom node ID on a paragraph')
+    def set_paragraph_custom_node_id(doc_id: str, paragraph_index: int, custom_node_id: int):
+        return tool_set_paragraph_custom_node_id(doc_id, paragraph_index, custom_node_id)
 
     @mcp.tool(description='Create a custom style with font properties')
     def create_custom_style(

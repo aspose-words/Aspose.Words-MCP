@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from io import BytesIO
+from pathlib import Path
 from typing import List, Optional
 
 import aspose.words as aw
@@ -593,3 +595,76 @@ def delete_paragraph(doc_id: str, paragraph_index: int = 0) -> bool:
     node.remove()
     doc.save(str(path))
     return True
+
+
+def set_paragraph_custom_node_id(
+    doc_id: str, paragraph_index: int = 0, custom_node_id: int = 0
+) -> bool:
+    path = ensure_path(doc_id)
+    doc = aw.Document(str(path))
+    paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+    if paragraph_index < 0 or paragraph_index >= paras.count:
+        raise IndexError('paragraph_index out of range')
+    paragraph = paras[paragraph_index]
+    resolved_custom_node_id = int(custom_node_id)
+    paragraph.custom_node_id = resolved_custom_node_id
+    paragraph_text = paragraph.to_string(aw.SaveFormat.TEXT) or ''
+    doc.save(str(path))
+    _persist_paragraph_custom_node_id(
+        path,
+        paragraph_index,
+        paragraph_text,
+        resolved_custom_node_id,
+    )
+    return True
+
+
+def _persist_paragraph_custom_node_id(
+    path: Path, paragraph_index: int, paragraph_text: str, custom_node_id: int
+) -> None:
+    sidecar_path = path.with_suffix('.custom_node_id.json')
+
+    records: List[dict[str, int | str]] = []
+    if sidecar_path.exists():
+        with sidecar_path.open('r', encoding='utf-8') as sidecar_file:
+            loaded_records = json.load(sidecar_file)
+        if isinstance(loaded_records, list):
+            for record in loaded_records:
+                if not isinstance(record, dict):
+                    continue
+                kind = record.get('kind')
+                stored_paragraph_index = record.get('paragraph_index')
+                stored_expected_text = record.get('expected_text')
+                stored_custom_node_id = record.get('custom_node_id')
+                if (
+                    kind == 'paragraph'
+                    and isinstance(stored_paragraph_index, int)
+                    and isinstance(stored_expected_text, str)
+                    and isinstance(stored_custom_node_id, int)
+                ):
+                    records.append(
+                        {
+                            'kind': 'paragraph',
+                            'paragraph_index': stored_paragraph_index,
+                            'expected_text': stored_expected_text,
+                            'custom_node_id': stored_custom_node_id,
+                        }
+                    )
+
+    updated_records: List[dict[str, int | str]] = []
+    for record in records:
+        if record['kind'] == 'paragraph' and record['paragraph_index'] == paragraph_index:
+            continue
+        updated_records.append(record)
+
+    updated_records.append(
+        {
+            'kind': 'paragraph',
+            'paragraph_index': paragraph_index,
+            'expected_text': paragraph_text,
+            'custom_node_id': custom_node_id,
+        }
+    )
+
+    with sidecar_path.open('w', encoding='utf-8') as sidecar_file:
+        json.dump(updated_records, sidecar_file, ensure_ascii=False)

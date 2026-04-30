@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.4.0] - 2026-04-30
+### Added
+- Exposed paragraph custom node IDs through the MCP surface for the 26.4.0 PDF logical-structure scenario.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.4.0.
+
+### Skipped
+- Funnel-chart data-label rendering support was not exposed because this MCP server has no chart creation/formatting surface, so users cannot intentionally control this renderer-only behavior.
+- Chart leader-line style rendering support was not exposed because this MCP server has no chart authoring or leader-line formatting surface, so this renderer-only improvement is not intentionally controllable through MCP.
+- Locale-aware default axis-title rendering in DrawingML charts was not exposed because this MCP server has no chart axis-title or chart locale configuration surface, so this rendering improvement is not intentionally exposable through existing MCP tools.
+
 ## [26.3.0] - 2026-04-04
 ### Added
 - Exposed opt-in run joining through the existing text replacement MCP surface.

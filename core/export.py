@@ -1,11 +1,128 @@
 from __future__ import annotations
 
+import json
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import aspose.words as aw
 
 from core.utils.docs_util import ensure_path, ensure_resources_dir
+
+
+def _normalize_paragraph_text(text: str) -> str:
+    return ' '.join(text.split())
+
+
+def _apply_pdf_custom_node_id_metadata(doc: Any, file_path: Path) -> None:
+    sidecar_path = file_path.with_suffix('.custom_node_id.json')
+    if not sidecar_path.exists():
+        return
+
+    with sidecar_path.open('r', encoding='utf-8') as sidecar_file:
+        records = json.load(sidecar_file)
+
+    if not isinstance(records, list):
+        raise ValueError('Custom-node-ID sidecar must be a JSON list of records')
+
+    paragraphs = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
+
+    claimed_paragraph_indices: set[int] = set()
+
+    for record_index, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise ValueError(
+                f'Custom-node-ID sidecar record at index {record_index} must be an object'
+            )
+
+        kind = record.get('kind')
+        paragraph_index = record.get('paragraph_index')
+        expected_text = record.get('expected_text')
+        custom_node_id = record.get('custom_node_id')
+
+        if kind != 'paragraph':
+            raise ValueError(
+                f'Unsupported custom-node-ID record kind at index {record_index}: {kind!r}'
+            )
+        if not isinstance(paragraph_index, int):
+            raise ValueError(
+                f'Custom-node-ID paragraph_index at index {record_index} must be an integer'
+            )
+        if paragraph_index < 0:
+            raise ValueError(
+                f'Custom-node-ID paragraph_index at index {record_index} must be non-negative'
+            )
+        if not isinstance(expected_text, str):
+            raise ValueError(
+                f'Custom-node-ID expected_text at index {record_index} must be a string'
+            )
+        if not isinstance(custom_node_id, int):
+            raise ValueError(
+                f'Custom-node-ID custom_node_id at index {record_index} must be an integer'
+            )
+
+        target_paragraph = None
+        target_paragraph_index: Optional[int] = None
+        normalized_expected_text = _normalize_paragraph_text(expected_text)
+
+        if paragraph_index < paragraphs.count:
+            indexed_paragraph = paragraphs[paragraph_index]
+            indexed_text = indexed_paragraph.to_string(aw.SaveFormat.TEXT) or ''
+            if (
+                _normalize_paragraph_text(indexed_text) == normalized_expected_text
+                and paragraph_index not in claimed_paragraph_indices
+            ):
+                target_paragraph = indexed_paragraph
+                target_paragraph_index = paragraph_index
+
+        if target_paragraph is None:
+            matches: list[tuple[int, Any]] = []
+            for current_index in range(paragraphs.count):
+                if current_index in claimed_paragraph_indices:
+                    continue
+                paragraph = paragraphs[current_index]
+                paragraph_text = paragraph.to_string(aw.SaveFormat.TEXT) or ''
+                if _normalize_paragraph_text(paragraph_text) == normalized_expected_text:
+                    matches.append((current_index, paragraph))
+
+            if len(matches) == 1:
+                target_paragraph_index, target_paragraph = matches[0]
+            elif len(matches) == 0:
+                raise ValueError(
+                    'Unable to resolve paragraph for custom-node-ID record '
+                    f'at index {record_index}: no text match found'
+                )
+            else:
+                best_distance = min(abs(index - paragraph_index) for index, _ in matches)
+                nearest_matches = [
+                    (index, paragraph)
+                    for index, paragraph in matches
+                    if abs(index - paragraph_index) == best_distance
+                ]
+
+                if len(nearest_matches) == 1:
+                    target_paragraph_index, target_paragraph = nearest_matches[0]
+                else:
+                    raise ValueError(
+                        'Unable to resolve paragraph for custom-node-ID record '
+                        f'at index {record_index}: multiple text matches found'
+                    )
+
+        if target_paragraph_index is None:
+            raise ValueError(
+                'Unable to resolve paragraph for custom-node-ID record '
+                f'at index {record_index}: paragraph index resolution failed'
+            )
+
+        if target_paragraph_index in claimed_paragraph_indices:
+            raise ValueError(
+                'Unable to resolve paragraph for custom-node-ID record '
+                f'at index {record_index}: paragraph already matched by earlier record'
+            )
+
+        claimed_paragraph_indices.add(target_paragraph_index)
+
+        target_paragraph.custom_node_id = custom_node_id
 
 
 def with_svg_embed_options() -> Any:
@@ -62,6 +179,7 @@ def export(doc_id: str, fmt: str = 'docx') -> Tuple[bytes, str, str]:
     doc = aw.Document(str(file_path))
     fmt_l = (fmt or 'docx').lower()
     if fmt_l == 'pdf':
+        _apply_pdf_custom_node_id_metadata(doc, file_path)
         save_format = aw.SaveFormat.PDF
         mime = 'application/pdf'
         ext = 'pdf'
@@ -178,6 +296,8 @@ def export_advanced(
         raise ValueError(f'Unsupported export format: {fmt}')
     if fmt_l == 'pdf' and opts.get('enable_text_shaping') is True:
         doc.layout_options.enable_text_shaping = True
+    if fmt_l == 'pdf':
+        _apply_pdf_custom_node_id_metadata(doc, file_path)
     if spec.get('custom'):
         data = export_markdown(doc)
         return data, spec['mime'], spec['ext']
