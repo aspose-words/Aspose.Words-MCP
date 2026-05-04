@@ -39,6 +39,20 @@ def build_pdf_opts(options: Dict[str, Any]) -> Any:
         key_norm = key.replace('_A_', 'A')
         if key_norm in m:
             pdf_opts.compliance = m[key_norm]
+    cpe = (options or {}).get('custom_properties_export')
+    if cpe is not None:
+        cpe_map = {
+            'none': aw.saving.PdfCustomPropertiesExport.NONE,
+            'standard': aw.saving.PdfCustomPropertiesExport.STANDARD,
+            'metadata': aw.saving.PdfCustomPropertiesExport.METADATA,
+        }
+        cpe_key = str(cpe).lower()
+        if cpe_key not in cpe_map:
+            allowed = ', '.join(cpe_map.keys())
+            raise ValueError(
+                f'custom_properties_export must be one of: {allowed}, got: {cpe!r}'
+            )
+        pdf_opts.custom_properties_export = cpe_map[cpe_key]
     return pdf_opts
 
 

@@ -76,6 +76,56 @@ def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
             assert out['mime'] == expected_mime
 
 
+def test_export_pdf_custom_properties_export():
+    """Test custom_properties_export option for PDF export."""
+    r = srv.tool_create_document('p0-pdf-cpe.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Test content')
+
+    for cpe_value in ('none', 'standard', 'metadata'):
+        out = srv.tool_export_base64_advanced(
+            did, fmt='pdf', options={'custom_properties_export': cpe_value}
+        )
+        assert set(out) >= {'base64', 'mime', 'ext'}
+        raw = base64.b64decode(out['base64'])
+        assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+        assert out['ext'] == 'pdf'
+        assert out['mime'] == 'application/pdf'
+
+
+def test_export_pdf_custom_properties_export_invalid():
+    """Test that invalid custom_properties_export raises ValueError."""
+    r = srv.tool_create_document('p0-pdf-cpe-invalid.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Test content')
+
+    with pytest.raises(ValueError, match='custom_properties_export must be one of'):
+        srv.tool_export_base64_advanced(
+            did, fmt='pdf', options={'custom_properties_export': 'invalid'}
+        )
+
+
+def test_export_pdf_compliance_and_custom_properties_export():
+    """Test that compliance and custom_properties_export work together."""
+    r = srv.tool_create_document('p0-pdf-both.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Test content')
+
+    out = srv.tool_export_base64_advanced(
+        did,
+        fmt='pdf',
+        options={
+            'compliance': 'PDF_A1B',
+            'custom_properties_export': 'metadata',
+        },
+    )
+    assert set(out) >= {'base64', 'mime', 'ext'}
+    raw = base64.b64decode(out['base64'])
+    assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+    assert out['ext'] == 'pdf'
+    assert out['mime'] == 'application/pdf'
+
+
 def test_bookmarks_and_hyperlinks():
     r = srv.tool_create_document('p0-links.docx')
     did = r['docId']
