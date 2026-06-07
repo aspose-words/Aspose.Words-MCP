@@ -16,6 +16,7 @@ from core import notes as _notes
 from core import properties as _properties
 from core import protection as _protection
 from core import reading as _reading
+from core import signatures as _signatures
 from core import styles as _styles
 from core import tables as _tables
 from core import watermarks as _watermarks
@@ -763,6 +764,49 @@ def tool_merge(doc_ids: list, append_document_with_new_page: Optional[bool] = No
     return {'docId': new_id}
 
 
+def tool_import_header_footer_node(
+    source_doc_id: str,
+    destination_doc_id: str,
+    header_footer_type: str,
+    resolve_theme_colors: bool = False,
+):
+    _io.import_header_footer_node(
+        source_doc_id,
+        destination_doc_id,
+        header_footer_type,
+        resolve_theme_colors=resolve_theme_colors,
+    )
+    return {'docId': destination_doc_id}
+
+
+def tool_sign_document(
+    source_doc_id: str,
+    destination_doc_id: str,
+    certificate_base64: str,
+    certificate_passphrase: str,
+    application_version: Optional[str] = None,
+    color_depth: Optional[int] = None,
+    horizontal_resolution: Optional[int] = None,
+    office_version: Optional[str] = None,
+    vertical_resolution: Optional[int] = None,
+    windows_version: Optional[str] = None,
+):
+    certificate_bytes = base64.b64decode(certificate_base64)
+    signed_doc_id = _signatures.sign_document(
+        source_doc_id=source_doc_id,
+        destination_doc_id=destination_doc_id,
+        certificate_bytes=certificate_bytes,
+        certificate_passphrase=certificate_passphrase,
+        application_version=application_version,
+        color_depth=color_depth,
+        horizontal_resolution=horizontal_resolution,
+        office_version=office_version,
+        vertical_resolution=vertical_resolution,
+        windows_version=windows_version,
+    )
+    return {'docId': signed_doc_id}
+
+
 def tool_save_as_new(doc_id: str, name: str, fmt: str = 'docx'):
     new_id, new_name = _io.save_as_new(doc_id, name, fmt=fmt)
     _store_add_mapping(new_id, new_name)
@@ -1417,6 +1461,46 @@ def register_tools() -> None:
         return tool_merge(
             source_doc_ids,
             append_document_with_new_page=append_document_with_new_page,
+        )
+
+    @mcp.tool(description='Import a header or footer from one stored document into another')
+    def import_header_footer_node(
+        source_doc_id: str,
+        destination_doc_id: str,
+        header_footer_type: str,
+        resolve_theme_colors: bool = False,
+    ):
+        return tool_import_header_footer_node(
+            source_doc_id,
+            destination_doc_id,
+            header_footer_type,
+            resolve_theme_colors=resolve_theme_colors,
+        )
+
+    @mcp.tool(description='Digitally sign a stored document with certificate metadata')
+    def sign_document(
+        source_doc_id: str,
+        destination_doc_id: str,
+        certificate_base64: str,
+        certificate_passphrase: str,
+        application_version: Optional[str] = None,
+        color_depth: Optional[int] = None,
+        horizontal_resolution: Optional[int] = None,
+        office_version: Optional[str] = None,
+        vertical_resolution: Optional[int] = None,
+        windows_version: Optional[str] = None,
+    ):
+        return tool_sign_document(
+            source_doc_id=source_doc_id,
+            destination_doc_id=destination_doc_id,
+            certificate_base64=certificate_base64,
+            certificate_passphrase=certificate_passphrase,
+            application_version=application_version,
+            color_depth=color_depth,
+            horizontal_resolution=horizontal_resolution,
+            office_version=office_version,
+            vertical_resolution=vertical_resolution,
+            windows_version=windows_version,
         )
 
     @mcp.tool(description='Save a copy of the document with a new name and format')

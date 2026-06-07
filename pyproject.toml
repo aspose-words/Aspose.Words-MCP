@@ -14,7 +14,7 @@ authors = [
 license = { file = "LICENSE" }
 dependencies = [
   "fastmcp",
-  "aspose-words>=26.4.0",
+  "aspose-words>=26.5.0",
 ]
 
 [project.optional-dependencies]

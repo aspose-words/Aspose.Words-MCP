@@ -40,4 +40,4 @@ def protect_restrict(
                 _content.format_range(doc_id, pidx, start, end)
     doc.protect(aw.ProtectionType.READ_ONLY, password)
     doc.save(str(path))
-    return str(doc.protection_type)
+    return 'ReadOnly'

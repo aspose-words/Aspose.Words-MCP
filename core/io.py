@@ -12,7 +12,7 @@ from core.utils.docs_util import docx_path, ensure_path, get_data_dir
 def create_document(name: Optional[str] = None) -> Tuple[str, str]:
     if name is None:
         name = 'hello.docx'
-    doc_id = str(uuid.uuid4())
+    doc_id = uuid.uuid4().urn.removeprefix('urn:uuid:')
     doc = aw.Document()
     file_path = docx_path(doc_id)
     doc.save(str(file_path))
@@ -24,7 +24,7 @@ def import_from_file(filename: str) -> Tuple[str, str]:
     if not src_path.exists():
         raise FileNotFoundError(f'Source file not found: {filename}')
     doc = aw.Document(str(src_path))
-    doc_id = str(uuid.uuid4())
+    doc_id = uuid.uuid4().urn.removeprefix('urn:uuid:')
     dst = docx_path(doc_id)
     doc.save(str(dst), aw.SaveFormat.DOCX)
     return doc_id, src_path.name
@@ -32,7 +32,7 @@ def import_from_file(filename: str) -> Tuple[str, str]:
 
 def copy(doc_id: str) -> str:
     src = ensure_path(str(doc_id))
-    new_id = str(uuid.uuid4())
+    new_id = uuid.uuid4().urn.removeprefix('urn:uuid:')
     dst = docx_path(new_id)
     doc = aw.Document(str(src))
     doc.save(str(dst), aw.SaveFormat.DOCX)
@@ -41,7 +41,7 @@ def copy(doc_id: str) -> str:
 
 def save_as_new(doc_id: str, name: Optional[str] = None, fmt: str = 'docx') -> Tuple[str, str]:
     src_path = ensure_path(str(doc_id))
-    new_id = str(uuid.uuid4())
+    new_id = uuid.uuid4().urn.removeprefix('urn:uuid:')
     new_name = name or f'document.{fmt or "docx"}'
     doc = aw.Document(str(src_path))
     dst_path = docx_path(new_id)
@@ -66,6 +66,51 @@ def delete(doc_id: str) -> bool:
 
 def document_exists(doc_id: str) -> bool:
     return docx_path(str(doc_id)).exists()
+
+
+def import_header_footer_node(
+    source_doc_id: str,
+    destination_doc_id: str,
+    header_footer_type: str,
+    resolve_theme_colors: bool = False,
+) -> str:
+    header_footer_types = {
+        'header_primary': aw.HeaderFooterType.HEADER_PRIMARY,
+        'header_first': aw.HeaderFooterType.HEADER_FIRST,
+        'header_even': aw.HeaderFooterType.HEADER_EVEN,
+        'footer_primary': aw.HeaderFooterType.FOOTER_PRIMARY,
+        'footer_first': aw.HeaderFooterType.FOOTER_FIRST,
+        'footer_even': aw.HeaderFooterType.FOOTER_EVEN,
+    }
+    mapped_header_footer_type = header_footer_types.get(header_footer_type)
+    if mapped_header_footer_type is None:
+        accepted_values = ', '.join(sorted(header_footer_types.keys()))
+        raise ValueError(
+            f"Unsupported header_footer_type '{header_footer_type}'. "
+            f"Supported values: {accepted_values}"
+        )
+
+    source_path = ensure_path(str(source_doc_id))
+    destination_path = ensure_path(str(destination_doc_id))
+    source_document = aw.Document(str(source_path))
+    destination_document = aw.Document(str(destination_path))
+    source_node = source_document.first_section.headers_footers.get_by_header_footer_type(
+        mapped_header_footer_type
+    )
+    if source_node is None:
+        raise ValueError(f"Source document does not contain header/footer '{header_footer_type}'")
+
+    options = aw.ImportFormatOptions()
+    options.resolve_theme_colors = resolve_theme_colors
+    imported_node = destination_document.import_node(
+        src_node=source_node,
+        is_import_children=True,
+        import_format_mode=aw.ImportFormatMode.KEEP_SOURCE_FORMATTING,
+        import_format_options=options,
+    )
+    destination_document.first_section.headers_footers.add(imported_node)
+    destination_document.save(str(destination_path))
+    return destination_doc_id
 
 
 def cleanup_data_dir() -> int:
@@ -96,7 +141,7 @@ def merge(source_ids: List[str], append_document_with_new_page: Optional[bool] =
             aw.ImportFormatMode.KEEP_SOURCE_FORMATTING,
             import_format_options,
         )
-    new_id = str(uuid.uuid4())
+    new_id = uuid.uuid4().urn.removeprefix('urn:uuid:')
     dst = docx_path(new_id)
     result_doc.save(str(dst))
     return new_id
