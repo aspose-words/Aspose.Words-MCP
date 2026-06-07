@@ -118,6 +118,58 @@ def test_merge_omitted_new_page_option_uses_legacy_append_signature(monkeypatch,
     assert append_args[1] == 'KEEP_SOURCE_FORMATTING'
 
 
+def test_merge_false_resolve_theme_colors_uses_legacy_append_signature(monkeypatch, tmp_path):
+    class FakeImportFormatOptions:
+        def __init__(self):
+            self.append_document_with_new_page = None
+            self.resolve_theme_colors = None
+
+    class FakeDocument:
+        instances = []
+
+        def __init__(self, path: str):
+            self.path = path
+            self.append_calls = []
+            self.import_node_calls = []
+            self.saved_path = None
+            FakeDocument.instances.append(self)
+
+        def append_document(self, *args):
+            self.append_calls.append(args)
+
+        def import_node(self, **kwargs):
+            self.import_node_calls.append(kwargs)
+            return 'unexpected-imported-section'
+
+        def save(self, path: str):
+            self.saved_path = path
+
+    monkeypatch.setattr(_io, 'ensure_path', lambda sid: Path(tmp_path / f'{sid}.docx'))
+    monkeypatch.setattr(_io, 'docx_path', lambda sid: Path(tmp_path / f'{sid}.docx'))
+    monkeypatch.setattr(
+        _io.uuid, 'uuid4', lambda: uuid.UUID('00000000-0000-0000-0000-000000000789')
+    )
+    monkeypatch.setattr(_io.aw, 'Document', FakeDocument)
+    monkeypatch.setattr(_io.aw, 'ImportFormatOptions', FakeImportFormatOptions)
+    monkeypatch.setattr(
+        _io.aw,
+        'ImportFormatMode',
+        types.SimpleNamespace(KEEP_SOURCE_FORMATTING='KEEP_SOURCE_FORMATTING'),
+    )
+
+    merged_id = _io.merge(['source-a', 'source-b'], resolve_theme_colors=False)
+
+    assert merged_id == '00000000-0000-0000-0000-000000000789'
+    receiving_docs = [instance for instance in FakeDocument.instances if instance.append_calls]
+    assert len(receiving_docs) == 1
+    result_doc = receiving_docs[0]
+    assert len(result_doc.append_calls) == 1
+    append_args = result_doc.append_calls[0]
+    assert len(append_args) == 2
+    assert append_args[1] == 'KEEP_SOURCE_FORMATTING'
+    assert result_doc.import_node_calls == []
+
+
 @pytest.mark.parametrize('append_with_new_page', [True, False])
 def test_merge_explicit_new_page_option_passes_import_format_option(
     monkeypatch,
@@ -170,12 +222,99 @@ def test_merge_explicit_new_page_option_passes_import_format_option(
     assert append_args[2].append_document_with_new_page is append_with_new_page
 
 
+def test_merge_true_resolve_theme_colors_imports_sections_with_named_options(
+    monkeypatch,
+    tmp_path,
+):
+    class FakeImportFormatOptions:
+        def __init__(self):
+            self.append_document_with_new_page = None
+            self.resolve_theme_colors = None
+
+    class FakeSectionCollection:
+        def __init__(self, sections=None):
+            self._sections = list(sections or [])
+            self.added_sections = []
+
+        @property
+        def count(self):
+            return len(self._sections)
+
+        def __getitem__(self, index):
+            return self._sections[index]
+
+        def add(self, section):
+            self.added_sections.append(section)
+
+    class FakeDocument:
+        instances = []
+
+        def __init__(self, path: str):
+            self.path = path
+            self.append_calls = []
+            self.import_node_calls = []
+            self.saved_path = None
+            if path.endswith('source-b.docx'):
+                self.sections = FakeSectionCollection(['section-b-1', 'section-b-2'])
+            else:
+                self.sections = FakeSectionCollection()
+            FakeDocument.instances.append(self)
+
+        def append_document(self, *args):
+            self.append_calls.append(args)
+
+        def import_node(self, **kwargs):
+            self.import_node_calls.append(kwargs)
+            return f'imported-{kwargs["src_node"]}'
+
+        def save(self, path: str):
+            self.saved_path = path
+
+    monkeypatch.setattr(_io, 'ensure_path', lambda sid: Path(tmp_path / f'{sid}.docx'))
+    monkeypatch.setattr(_io, 'docx_path', lambda sid: Path(tmp_path / f'{sid}.docx'))
+    monkeypatch.setattr(
+        _io.uuid, 'uuid4', lambda: uuid.UUID('00000000-0000-0000-0000-000000000abc')
+    )
+    monkeypatch.setattr(_io.aw, 'Document', FakeDocument)
+    monkeypatch.setattr(_io.aw, 'ImportFormatOptions', FakeImportFormatOptions)
+    monkeypatch.setattr(
+        _io.aw,
+        'ImportFormatMode',
+        types.SimpleNamespace(KEEP_SOURCE_FORMATTING='KEEP_SOURCE_FORMATTING'),
+    )
+
+    merged_id = _io.merge(['source-a', 'source-b'], resolve_theme_colors=True)
+
+    assert merged_id == '00000000-0000-0000-0000-000000000abc'
+    result_doc = FakeDocument.instances[0]
+    assert result_doc.append_calls == []
+    assert len(result_doc.import_node_calls) == 2
+    assert result_doc.sections.added_sections == ['imported-section-b-1', 'imported-section-b-2']
+    for expected_section, import_node_call in zip(
+        ['section-b-1', 'section-b-2'], result_doc.import_node_calls
+    ):
+        assert set(import_node_call) == {
+            'src_node',
+            'is_import_children',
+            'import_format_mode',
+            'import_format_options',
+        }
+        assert import_node_call['src_node'] == expected_section
+        assert import_node_call['is_import_children'] is True
+        assert import_node_call['import_format_mode'] == 'KEEP_SOURCE_FORMATTING'
+        assert import_node_call['import_format_options'].resolve_theme_colors is True
+
+
 def test_tool_merge_forwards_none_new_page_flag_when_omitted(monkeypatch):
     calls = []
     mapped = []
 
-    def fake_merge(doc_ids, append_document_with_new_page=None):
-        calls.append((doc_ids, append_document_with_new_page))
+    def fake_merge(
+        doc_ids,
+        append_document_with_new_page=None,
+        resolve_theme_colors=None,
+    ):
+        calls.append((doc_ids, append_document_with_new_page, resolve_theme_colors))
         return 'merged-id-omitted'
 
     monkeypatch.setattr(srv._io, 'merge', fake_merge)
@@ -184,10 +323,10 @@ def test_tool_merge_forwards_none_new_page_flag_when_omitted(monkeypatch):
         srv, '_store_add_mapping', lambda doc_id, name: mapped.append((doc_id, name))
     )
 
-    result = srv.tool_merge(['doc-1', 'doc-2'])
+    merge_result = srv.tool_merge(['doc-1', 'doc-2'])
 
-    assert result == {'docId': 'merged-id-omitted'}
-    assert calls == [(['doc-1', 'doc-2'], None)]
+    assert merge_result == {'docId': 'merged-id-omitted'}
+    assert calls == [(['doc-1', 'doc-2'], None, None)]
     assert mapped == [('merged-id-omitted', 'merged_source.docx')]
 
 
@@ -196,8 +335,12 @@ def test_tool_merge_forwards_explicit_new_page_flag(monkeypatch, append_with_new
     calls = []
     mapped = []
 
-    def fake_merge(doc_ids, append_document_with_new_page=None):
-        calls.append((doc_ids, append_document_with_new_page))
+    def fake_merge(
+        doc_ids,
+        append_document_with_new_page=None,
+        resolve_theme_colors=None,
+    ):
+        calls.append((doc_ids, append_document_with_new_page, resolve_theme_colors))
         return 'merged-id-1'
 
     monkeypatch.setattr(srv._io, 'merge', fake_merge)
@@ -206,11 +349,73 @@ def test_tool_merge_forwards_explicit_new_page_flag(monkeypatch, append_with_new
         srv, '_store_add_mapping', lambda doc_id, name: mapped.append((doc_id, name))
     )
 
-    result = srv.tool_merge(['doc-1', 'doc-2'], append_document_with_new_page=append_with_new_page)
+    merge_result = srv.tool_merge(
+        ['doc-1', 'doc-2'], append_document_with_new_page=append_with_new_page
+    )
 
-    assert result == {'docId': 'merged-id-1'}
-    assert calls == [(['doc-1', 'doc-2'], append_with_new_page)]
+    assert merge_result == {'docId': 'merged-id-1'}
+    assert calls == [(['doc-1', 'doc-2'], append_with_new_page, None)]
     assert mapped == [('merged-id-1', 'merged_source.docx')]
+
+
+def test_tool_merge_forwards_resolve_theme_colors(monkeypatch):
+    calls = []
+    mapped = []
+
+    def fake_merge(
+        doc_ids,
+        append_document_with_new_page=None,
+        resolve_theme_colors=None,
+    ):
+        calls.append((doc_ids, append_document_with_new_page, resolve_theme_colors))
+        return 'merged-id-theme'
+
+    monkeypatch.setattr(srv._io, 'merge', fake_merge)
+    monkeypatch.setattr(srv.document_store, 'get_document_name', lambda doc_id: 'source.docx')
+    monkeypatch.setattr(
+        srv, '_store_add_mapping', lambda doc_id, name: mapped.append((doc_id, name))
+    )
+
+    merge_result = srv.tool_merge(['doc-1', 'doc-2'], resolve_theme_colors=True)
+
+    assert merge_result == {'docId': 'merged-id-theme'}
+    assert calls == [(['doc-1', 'doc-2'], None, True)]
+    assert mapped == [('merged-id-theme', 'merged_source.docx')]
+
+
+def test_registered_merge_documents_forwards_resolve_theme_colors(monkeypatch):
+    captured_tool_functions = {}
+    calls = []
+
+    class FakeMcp:
+        def tool(self, description=None):
+            def capture_tool(function_to_register):
+                captured_tool_functions[function_to_register.__name__] = function_to_register
+                return function_to_register
+
+            return capture_tool
+
+    def fake_tool_merge(
+        source_doc_ids,
+        append_document_with_new_page=None,
+        resolve_theme_colors=None,
+    ):
+        calls.append((source_doc_ids, append_document_with_new_page, resolve_theme_colors))
+        return {'docId': 'merged-id-wrapper'}
+
+    monkeypatch.setattr(srv, 'mcp', FakeMcp())
+    monkeypatch.setattr(srv, 'tool_merge', fake_tool_merge)
+
+    srv.register_tools()
+    merge_documents = captured_tool_functions['merge_documents']
+    merge_result = merge_documents(
+        ['doc-1', 'doc-2'],
+        append_document_with_new_page=False,
+        resolve_theme_colors=True,
+    )
+
+    assert merge_result == {'docId': 'merged-id-wrapper'}
+    assert calls == [(['doc-1', 'doc-2'], False, True)]
 
 
 def test_list_copy_text_xml_save_delete_merge():

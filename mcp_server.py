@@ -16,6 +16,7 @@ from core import notes as _notes
 from core import properties as _properties
 from core import protection as _protection
 from core import reading as _reading
+from core import signatures as _signatures
 from core import styles as _styles
 from core import tables as _tables
 from core import watermarks as _watermarks
@@ -751,10 +752,15 @@ def tool_get_outline_simple(doc_id: str):
     return tool_get_outline(doc_id)
 
 
-def tool_merge(doc_ids: list, append_document_with_new_page: Optional[bool] = None):
+def tool_merge(
+    doc_ids: list,
+    append_document_with_new_page: Optional[bool] = None,
+    resolve_theme_colors: Optional[bool] = None,
+):
     new_id = _io.merge(
         doc_ids,
         append_document_with_new_page=append_document_with_new_page,
+        resolve_theme_colors=resolve_theme_colors,
     )
     first = doc_ids[0] if doc_ids else None
     base = document_store.get_document_name(first) if first else None
@@ -840,6 +846,36 @@ def tool_protect_restrict(
 ):
     _protection.protect_restrict(doc_id, password=password, ranges=ranges)
     return {}
+
+
+def tool_sign_document(
+    doc_id: str,
+    certificate_path: str,
+    certificate_passphrase: str = '',
+    application_version: Optional[str] = None,
+    color_depth: Optional[int] = None,
+    horizontal_resolution: Optional[int] = None,
+    office_version: Optional[str] = None,
+    vertical_resolution: Optional[int] = None,
+    windows_version: Optional[str] = None,
+):
+    _signatures.sign_document(
+        doc_id,
+        certificate_path,
+        certificate_passphrase,
+        application_version=application_version,
+        color_depth=color_depth,
+        horizontal_resolution=horizontal_resolution,
+        office_version=office_version,
+        vertical_resolution=vertical_resolution,
+        windows_version=windows_version,
+    )
+    return {}
+
+
+def tool_get_digital_signatures(doc_id: str):
+    signatures = _signatures.list_digital_signatures(doc_id)
+    return {'signatures': signatures}
 
 
 def tool_get_all_comments(doc_id: str):
@@ -1413,10 +1449,12 @@ def register_tools() -> None:
     def merge_documents(
         source_doc_ids: list,
         append_document_with_new_page: Optional[bool] = None,
+        resolve_theme_colors: Optional[bool] = None,
     ):
         return tool_merge(
             source_doc_ids,
             append_document_with_new_page=append_document_with_new_page,
+            resolve_theme_colors=resolve_theme_colors,
         )
 
     @mcp.tool(description='Save a copy of the document with a new name and format')
@@ -1484,6 +1522,34 @@ def register_tools() -> None:
         doc_id: str, password: Optional[str] = None, ranges: Optional[list] = None
     ):
         return tool_protect_restrict(doc_id, password=password, ranges=ranges)
+
+    @mcp.tool(description='Sign the document with a digital certificate')
+    def sign_document(
+        doc_id: str,
+        certificate_path: str,
+        certificate_passphrase: str = '',
+        application_version: Optional[str] = None,
+        color_depth: Optional[int] = None,
+        horizontal_resolution: Optional[int] = None,
+        office_version: Optional[str] = None,
+        vertical_resolution: Optional[int] = None,
+        windows_version: Optional[str] = None,
+    ):
+        return tool_sign_document(
+            doc_id=doc_id,
+            certificate_path=certificate_path,
+            certificate_passphrase=certificate_passphrase,
+            application_version=application_version,
+            color_depth=color_depth,
+            horizontal_resolution=horizontal_resolution,
+            office_version=office_version,
+            vertical_resolution=vertical_resolution,
+            windows_version=windows_version,
+        )
+
+    @mcp.tool(description='Get document digital signature metadata')
+    def get_digital_signatures(doc_id: str):
+        return tool_get_digital_signatures(doc_id)
 
     @mcp.tool(description='Get all document comments')
     def get_all_comments(doc_id: str):

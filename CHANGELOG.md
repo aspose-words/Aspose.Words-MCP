@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.5.0] - 2026-06-05
+### Added
+- Exposed the `DocumentBase.import_node` overload with `ImportFormatOptions`, including `ImportFormatOptions.resolve_theme_colors`.
+- Exposed digital signing metadata controls for `SignOptions`: `application_version`, `color_depth`, `horizontal_resolution`, `office_version`, `vertical_resolution`, and `windows_version`.
+- Exposed digital signature metadata fields: `application_version`, `color_depth`, `horizontal_resolution`, `office_version`, `vertical_resolution`, and `windows_version`.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.5.0.
+
 ## [26.4.0] - 2026-04-30
 ### Changed
 - Aligned server versioning with Aspose.Words 26.4.0.

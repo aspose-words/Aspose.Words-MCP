@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aspose-words-mcp"
-version = "26.4.0"
+version = "26.5.0"
 description = "MCP server for Aspose.Words automation (FastMCP-based)"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -14,14 +14,7 @@ authors = [
 license = { file = "LICENSE" }
 dependencies = [
   "fastmcp",
-  "aspose-words>=26.4.0",
-]
-
-[project.optional-dependencies]
-dev = [
-  "build",
-  "pytest",
-  "ruff>=0.11.0",
+  "aspose-words>=26.5.0",
 ]
 
 keywords = [
@@ -51,6 +44,13 @@ classifiers = [
 "Documentation" = "https://github.com/aspose-words/Aspose.Words-MCP#readme"
 "Repository" = "https://github.com/aspose-words/Aspose.Words-MCP"
 "Free Support" = "https://forum.aspose.com/c/words/8"
+
+[project.optional-dependencies]
+dev = [
+  "build",
+  "pytest",
+  "ruff>=0.11.0",
+]
 
 [tool.setuptools]
 py-modules = ["mcp_server"]
