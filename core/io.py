@@ -76,12 +76,35 @@ def cleanup_data_dir() -> int:
     return count
 
 
-def merge(source_ids: List[str], append_document_with_new_page: Optional[bool] = None) -> str:
+def merge(
+    source_ids: List[str],
+    append_document_with_new_page: Optional[bool] = None,
+    resolve_theme_colors: Optional[bool] = None,
+) -> str:
     if not source_ids:
         raise ValueError('sourceIds must be non-empty')
     first_path = ensure_path(source_ids[0])
     result_doc = aw.Document(str(first_path))
     import_format_options: Optional[aw.ImportFormatOptions] = None
+    if resolve_theme_colors is True:
+        import_format_options = aw.ImportFormatOptions()
+        import_format_options.resolve_theme_colors = True
+        for sid in source_ids[1:]:
+            p = ensure_path(sid)
+            src = aw.Document(str(p))
+            for section_index in range(src.sections.count):
+                section = src.sections[section_index]
+                imported_section = result_doc.import_node(
+                    src_node=section,
+                    is_import_children=True,
+                    import_format_mode=aw.ImportFormatMode.KEEP_SOURCE_FORMATTING,
+                    import_format_options=import_format_options,
+                )
+                result_doc.sections.add(imported_section)
+        new_id = str(uuid.uuid4())
+        dst = docx_path(new_id)
+        result_doc.save(str(dst))
+        return new_id
     if append_document_with_new_page is not None:
         import_format_options = aw.ImportFormatOptions()
         import_format_options.append_document_with_new_page = append_document_with_new_page

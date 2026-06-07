@@ -21,3 +21,4 @@ venv/
 /data/
 /SWARM_*
 mcp-updater-inputs/
+/mcp-updater-inputs/
