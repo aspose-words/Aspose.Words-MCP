@@ -39,3 +39,11 @@ def properties_set(
         props.keywords = keywords
     doc.save(str(path))
     return True
+
+
+def remove_customizations(doc_id: str) -> bool:
+    path = ensure_path(doc_id)
+    doc = aw.Document(str(path))
+    doc.remove_customizations()
+    doc.save(str(path))
+    return True

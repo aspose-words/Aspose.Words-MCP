@@ -29,7 +29,12 @@ def export_markdown(doc: Any) -> bytes:
 
 def build_pdf_opts(options: Dict[str, Any]) -> Any:
     pdf_opts = aw.saving.PdfSaveOptions()
-    comp = (options or {}).get('compliance')
+    opts = options or {}
+    if opts.get('preserve_form_fields') is not None:
+        pdf_opts.preserve_form_fields = bool(opts['preserve_form_fields'])
+    if opts.get('generate_form_field_scripts') is not None:
+        pdf_opts.generate_form_field_scripts = bool(opts['generate_form_field_scripts'])
+    comp = opts.get('compliance')
     if comp:
         m = {
             'PDF_A1A': aw.saving.PdfCompliance.PDF_A1A,

@@ -831,6 +831,11 @@ def tool_properties_set(
     return _properties.properties_get(doc_id)
 
 
+def tool_remove_customizations(doc_id: str):
+    _properties.remove_customizations(doc_id)
+    return {}
+
+
 def tool_protect_document(doc_id: str, password: Optional[str] = None):
     _protection.protect(doc_id, password=password)
     return {}
@@ -1508,6 +1513,10 @@ def register_tools() -> None:
         return tool_properties_set(
             doc_id, title=title, author=author, subject=subject, keywords=keywords
         )
+
+    @mcp.tool(description='Remove custom document UI and keyboard customizations')
+    def remove_customizations(doc_id: str):
+        return tool_remove_customizations(doc_id)
 
     @mcp.tool(description='Protect the document with a password')
     def protect_document(doc_id: str, password: Optional[str] = None):

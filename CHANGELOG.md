@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.6.0] - 2026-06-15
+### Added
+- Exposed `Document.remove_customizations()` through the document management MCP surface to remove custom toolbar and keyboard command customizations.
+- Exposed PDF datetime form field export controls through advanced PDF export options: `PdfSaveOptions.preserve_form_fields` and `PdfSaveOptions.generate_form_field_scripts`.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.6.0.
+
+### Skipped
+- Windows-specific .NET target framework monikers for printing were not exposed because this Python MCP server does not surface .NET NuGet target framework or Windows printing configuration.
+- Date picker content control preservation, datetime form-field PDF rendering quality, and hyphenation fallback improvements were not exposed separately because they are behavior improvements in existing save/render APIs once the relevant PDF options are available.
+- Repeated table header row layout fixes were not exposed because they are rendering/layout behavior corrections in existing table and export flows, not new controllable MCP API surface.
+- MsoHtml import, MathML/Markdown/MHTML conversion, image/font rendering, layout, document comparison, revision, footnote/endnote, chart label, and default font substitution fixes were not exposed as separate tools because the 26.6.0 release notes describe behavior fixes without new public MCP-facing API controls.
+- Product documentation cleanup items were not exposed because they are not Aspose.Words runtime API surface.
+
 ## [26.5.0] - 2026-06-05
 ### Added
 - Exposed the `DocumentBase.import_node` overload with `ImportFormatOptions`, including `ImportFormatOptions.resolve_theme_colors`.

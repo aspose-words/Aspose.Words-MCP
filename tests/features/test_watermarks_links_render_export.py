@@ -76,6 +76,26 @@ def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
             assert out['mime'] == expected_mime
 
 
+def test_pdf_export_form_field_script_options_are_mapped(monkeypatch):
+    created_options = []
+
+    class FakePdfSaveOptions:
+        def __init__(self):
+            self.preserve_form_fields = None
+            self.generate_form_field_scripts = None
+            created_options.append(self)
+
+    monkeypatch.setattr(srv._export.aw.saving, 'PdfSaveOptions', FakePdfSaveOptions)
+
+    pdf_options = srv._export.build_pdf_opts(
+        {'preserve_form_fields': True, 'generate_form_field_scripts': True}
+    )
+
+    assert pdf_options is created_options[0]
+    assert pdf_options.preserve_form_fields is True
+    assert pdf_options.generate_form_field_scripts is True
+
+
 def test_bookmarks_and_hyperlinks():
     r = srv.tool_create_document('p0-links.docx')
     did = r['docId']

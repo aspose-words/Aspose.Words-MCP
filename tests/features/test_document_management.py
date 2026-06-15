@@ -455,3 +455,68 @@ def test_properties_get_set():
     props = srv.tool_properties_get(did)
     assert props['title'] == 'T'
     assert props['author'] == 'A'
+
+
+def test_remove_customizations_core_calls_document_api(monkeypatch, tmp_path):
+    calls = []
+
+    class FakeDocument:
+        def __init__(self, path: str):
+            self.path = path
+
+        def remove_customizations(self):
+            calls.append(('remove_customizations', self.path))
+
+        def save(self, path: str):
+            calls.append(('save', path))
+
+    monkeypatch.setattr(srv._properties, 'ensure_path', lambda doc_id: tmp_path / f'{doc_id}.docx')
+    monkeypatch.setattr(srv._properties.aw, 'Document', FakeDocument)
+
+    assert srv._properties.remove_customizations('customized') is True
+
+    expected_path = str(tmp_path / 'customized.docx')
+    assert calls == [
+        ('remove_customizations', expected_path),
+        ('save', expected_path),
+    ]
+
+
+def test_tool_remove_customizations_delegates(monkeypatch):
+    calls = []
+
+    def fake_remove_customizations(doc_id):
+        calls.append(doc_id)
+        return True
+
+    monkeypatch.setattr(srv._properties, 'remove_customizations', fake_remove_customizations)
+
+    assert srv.tool_remove_customizations('doc-custom') == {}
+    assert calls == ['doc-custom']
+
+
+def test_registered_remove_customizations_delegates(monkeypatch):
+    captured_tool_functions = {}
+    calls = []
+
+    class FakeMcp:
+        def tool(self, description=None):
+            def capture_tool(function_to_register):
+                captured_tool_functions[function_to_register.__name__] = function_to_register
+                return function_to_register
+
+            return capture_tool
+
+    def fake_tool_remove_customizations(doc_id):
+        calls.append(doc_id)
+        return {}
+
+    monkeypatch.setattr(srv, 'mcp', FakeMcp())
+    monkeypatch.setattr(srv, 'tool_remove_customizations', fake_tool_remove_customizations)
+
+    srv.register_tools()
+    remove_customizations = captured_tool_functions['remove_customizations']
+    result = remove_customizations('registered-doc')
+
+    assert result == {}
+    assert calls == ['registered-doc']
