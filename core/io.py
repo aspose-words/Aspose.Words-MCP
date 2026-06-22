@@ -86,7 +86,7 @@ def merge(
     first_path = ensure_path(source_ids[0])
     result_doc = aw.Document(str(first_path))
     import_format_options: Optional[aw.ImportFormatOptions] = None
-    if resolve_theme_colors is True:
+    if resolve_theme_colors:
         import_format_options = aw.ImportFormatOptions()
         import_format_options.resolve_theme_colors = True
         for sid in source_ids[1:]:

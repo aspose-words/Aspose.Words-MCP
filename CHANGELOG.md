@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.6.0] - 2026-06-22
+### Added
+- Exposed `Document.remove_customizations` through the MCP protection surface for removing document toolbar and keyboard command customizations.
+- Exposed `PdfSaveOptions.generate_form_field_scripts` through advanced PDF export options.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.6.0.
+
 ## [26.5.0] - 2026-06-05
 ### Added
 - Exposed the `DocumentBase.import_node` overload with `ImportFormatOptions`, including `ImportFormatOptions.resolve_theme_colors`.

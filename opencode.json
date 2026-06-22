@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "opencode-swarm"
+  ],
+  "permission": {
+    "bash": "allow",
+    "edit": "allow",
+    "external_directory": "allow",
+    "question": "deny"
+  }
+}

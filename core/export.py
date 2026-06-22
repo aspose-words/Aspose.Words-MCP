@@ -39,6 +39,8 @@ def build_pdf_opts(options: Dict[str, Any]) -> Any:
         key_norm = key.replace('_A_', 'A')
         if key_norm in m:
             pdf_opts.compliance = m[key_norm]
+    if (options or {}).get('generate_form_field_scripts'):
+        pdf_opts.generate_form_field_scripts = True
     return pdf_opts
 
 
