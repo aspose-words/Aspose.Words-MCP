@@ -1,5 +1,6 @@
 import base64
 import json
+from pathlib import Path
 
 import pytest
 
@@ -87,3 +88,23 @@ def test_bookmarks_and_hyperlinks():
     xml = srv.tool_get_xml(did)['xml']
     assert 'BM_TEST' in xml
     assert 'example.com' in xml
+
+
+def test_pdf_export_generate_form_field_scripts_option():
+    r = srv.tool_create_document('p0-pdf-form-field-scripts.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'PDF form field scripts')
+
+    out = srv.tool_export_base64_advanced(
+        did, fmt='pdf', options={'generate_form_field_scripts': True}
+    )
+
+    raw = base64.b64decode(out['base64'])
+    assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+    assert out['ext'] == 'pdf'
+    assert out['mime'] == 'application/pdf'
+
+    export_source = Path('core/export.py').read_text(encoding='utf-8')
+    assert 'pdf_opts.generate_form_field_scripts = True' in export_source
+    assert 'getattr(pdf_opts' not in export_source
+    assert 'hasattr(pdf_opts' not in export_source

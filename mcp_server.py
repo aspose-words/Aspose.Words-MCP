@@ -841,6 +841,11 @@ def tool_unprotect_document(doc_id: str, password: Optional[str] = None):
     return {}
 
 
+def tool_remove_document_customizations(doc_id: str):
+    removed = _protection.remove_customizations(doc_id)
+    return {'removed': removed}
+
+
 def tool_protect_restrict(
     doc_id: str, password: Optional[str] = None, ranges: Optional[list] = None
 ):
@@ -1516,6 +1521,10 @@ def register_tools() -> None:
     @mcp.tool(description='Unprotect the document')
     def unprotect_document(doc_id: str, password: Optional[str] = None):
         return tool_unprotect_document(doc_id, password=password)
+
+    @mcp.tool(description='Remove document toolbar and keyboard command customizations')
+    def remove_document_customizations(doc_id: str):
+        return tool_remove_document_customizations(doc_id)
 
     @mcp.tool(description='Restrict editing ranges in the document')
     def protect_restrict(

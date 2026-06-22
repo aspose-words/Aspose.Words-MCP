@@ -25,6 +25,14 @@ def unprotect(doc_id: str, password: Optional[str] = None) -> bool:
     return True
 
 
+def remove_customizations(doc_id: str) -> bool:
+    path = ensure_path(doc_id)
+    doc = aw.Document(str(path))
+    doc.remove_customizations()
+    doc.save(str(path))
+    return True
+
+
 def protect_restrict(
     doc_id: str, password: Optional[str] = None, ranges: Optional[List[Dict[str, int]]] = None
 ) -> str:
@@ -40,4 +48,4 @@ def protect_restrict(
                 _content.format_range(doc_id, pidx, start, end)
     doc.protect(aw.ProtectionType.READ_ONLY, password)
     doc.save(str(path))
-    return str(doc.protection_type)
+    return 'ReadOnly'

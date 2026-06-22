@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip('aspose.words')
@@ -31,3 +33,19 @@ def test_comments_and_notes_smoke():
     assert 'comments' in by_para and isinstance(by_para['comments'], list)
     notes = srv.tool_get_all_notes(did)
     assert isinstance(notes.get('notes', []), list) and len(notes['notes']) >= 1
+
+
+def test_remove_document_customizations_tool_and_explicit_api_usage():
+    res = srv.tool_create_document('customizations.docx')
+    did = res['docId']
+
+    result = srv.tool_remove_document_customizations(did)
+
+    assert result == {'removed': True}
+
+    protection_source = Path('core/protection.py').read_text(encoding='utf-8')
+    server_source = Path('mcp_server.py').read_text(encoding='utf-8')
+    assert 'doc.remove_customizations()' in protection_source
+    assert 'def remove_document_customizations(doc_id: str):' in server_source
+    assert 'getattr(doc' not in protection_source
+    assert 'hasattr(doc' not in protection_source
