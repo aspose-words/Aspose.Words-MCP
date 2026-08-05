@@ -1802,7 +1802,7 @@ def register_tools() -> None:
 def run_server(
     transport: Optional[str] = None,
     host: str = '0.0.0.0',
-    port: int = 8080,
+    port: int = 9110,
     path: str = '/mcp',
     license_path: Optional[str] = None,
 ):
@@ -1821,6 +1821,8 @@ def run_server(
     path_sse_env = os.getenv('MCP_SSE_PATH') or '/sse'
     logger.info('Starting Aspose.Words MCP (FastMCP)...')
     logger.info('Transport: %s', tr)
+    if tr == 'http':
+        tr = 'streamable-http'
     if tr in {'streamable-http', 'sse'}:
         path_for_tr = path_sse_env if tr == 'sse' else path_http_env
         logger.info('Listening on http://%s:%s%s (%s)', host_env, port_env, path_for_tr, tr)
@@ -1830,4 +1832,19 @@ def run_server(
 
 
 if __name__ == '__main__':
-    run_server()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Aspose.Words MCP Server')
+    parser.add_argument('--transport', help='Transport mode (stdio, sse, streamable-http)')
+    parser.add_argument('--host', default='0.0.0.0', help='Host to bind')
+    parser.add_argument('--port', type=int, default=9110, help='Port to bind')
+    parser.add_argument('--path', default='/mcp', help='HTTP path')
+    parser.add_argument('--license-path', help='License file path')
+    args = parser.parse_args()
+    run_server(
+        transport=args.transport,
+        host=args.host,
+        port=args.port,
+        path=args.path,
+        license_path=args.license_path,
+    )
