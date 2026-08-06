@@ -462,6 +462,7 @@ def insert_list(
     kind: str = 'bullet',
     where: str = 'end',
     paragraph_index: Optional[int] = None,
+    remove_list_level_tab_stop: bool = False,
 ) -> bool:
     if items is None:
         items = []
@@ -474,6 +475,8 @@ def insert_list(
         builder.list_format.apply_number_default()
     else:
         builder.list_format.apply_bullet_default()
+    if remove_list_level_tab_stop:
+        builder.list_format.list_level.remove_tab_stop()
     for it in items or []:
         builder.writeln(str(it))
     builder.list_format.remove_numbers()
@@ -491,6 +494,7 @@ def insert_near_text(
     level: Optional[int] = None,
     items: Optional[List[str]] = None,
     kind: Optional[str] = None,
+    remove_list_level_tab_stop: bool = False,
 ) -> bool:
     path = ensure_path(doc_id)
     doc = aw.Document(str(path))
@@ -525,6 +529,7 @@ def insert_near_text(
             kind=kind or 'bullet',
             where='paragraph',
             paragraph_index=pidx,
+            remove_list_level_tab_stop=remove_list_level_tab_stop,
         )
     else:
         builder.writeln(text or '')

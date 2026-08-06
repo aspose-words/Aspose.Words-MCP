@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.7.0] - 2026-08-06
+### Added
+- Exposed `ListLevel.remove_tab_stop` through the existing list insertion MCP surface.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.7.0.
+
 ## [26.6.0] - 2026-06-22
 ### Added
 - Exposed `Document.remove_customizations` through the MCP protection surface for removing document toolbar and keyboard command customizations.
