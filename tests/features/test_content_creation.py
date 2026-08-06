@@ -382,6 +382,41 @@ def test_insert_lists_start_and_at_paragraph():
         assert s in j
 
 
+def test_insert_numbered_list_can_remove_list_level_tab_stop():
+    r = srv.tool_create_document('list-remove-tab-stop.docx')
+    did = r['docId']
+
+    srv.tool_insert_list_end(
+        did,
+        items=['Numbered list item 1', 'Numbered list item 2'],
+        kind='number',
+        remove_list_level_tab_stop=True,
+    )
+
+    paras = srv.tool_read_paragraphs(did)['paragraphs']
+    joined = '\n'.join(paras)
+    assert 'Numbered list item 1' in joined
+    assert 'Numbered list item 2' in joined
+
+
+def test_insert_numbered_list_near_text_can_remove_list_level_tab_stop():
+    r = srv.tool_create_document('near-list-remove-tab-stop.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Anchor')
+
+    srv.tool_insert_numbered_list_near_text(
+        did,
+        target_text='Anchor',
+        list_items=['Near numbered item'],
+        position='after',
+        bullet_type='number',
+        remove_list_level_tab_stop=True,
+    )
+
+    paras = srv.tool_read_paragraphs(did)['paragraphs']
+    assert any('Near numbered item' in paragraph for paragraph in paras)
+
+
 def test_add_picture_start_and_outline_simple_and_stats():
     r = srv.tool_create_document('startpic.docx')
     did = r['docId']

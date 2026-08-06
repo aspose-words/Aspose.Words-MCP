@@ -331,21 +331,48 @@ def tool_add_table_at_paragraph(
     return {'tableIndex': int(idx)}
 
 
-def tool_insert_list_end(doc_id: str, items: list, kind: str = 'bullet'):
-    _content.insert_list(doc_id=doc_id, items=items, kind=kind, where='end', paragraph_index=None)
+def tool_insert_list_end(
+    doc_id: str, items: list, kind: str = 'bullet', remove_list_level_tab_stop: bool = False
+):
+    _content.insert_list(
+        doc_id=doc_id,
+        items=items,
+        kind=kind,
+        where='end',
+        paragraph_index=None,
+        remove_list_level_tab_stop=remove_list_level_tab_stop,
+    )
     return {}
 
 
-def tool_insert_list_start(doc_id: str, items: list, kind: str = 'bullet'):
-    _content.insert_list(doc_id=doc_id, items=items, kind=kind, where='start', paragraph_index=None)
+def tool_insert_list_start(
+    doc_id: str, items: list, kind: str = 'bullet', remove_list_level_tab_stop: bool = False
+):
+    _content.insert_list(
+        doc_id=doc_id,
+        items=items,
+        kind=kind,
+        where='start',
+        paragraph_index=None,
+        remove_list_level_tab_stop=remove_list_level_tab_stop,
+    )
     return {}
 
 
 def tool_insert_list_at_paragraph(
-    doc_id: str, items: list, paragraph_index: int, kind: str = 'bullet'
+    doc_id: str,
+    items: list,
+    paragraph_index: int,
+    kind: str = 'bullet',
+    remove_list_level_tab_stop: bool = False,
 ):
     _content.insert_list(
-        doc_id=doc_id, items=items, kind=kind, where='paragraph', paragraph_index=paragraph_index
+        doc_id=doc_id,
+        items=items,
+        kind=kind,
+        where='paragraph',
+        paragraph_index=paragraph_index,
+        remove_list_level_tab_stop=remove_list_level_tab_stop,
     )
     return {}
 
@@ -395,6 +422,7 @@ def tool_insert_numbered_list_near_text(
     position: str = 'after',
     target_paragraph_index: Optional[int] = None,
     bullet_type: str = 'bullet',
+    remove_list_level_tab_stop: bool = False,
 ):
     kind = 'number' if (bullet_type or '').lower() == 'number' else 'bullet'
     _content.insert_near_text(
@@ -405,6 +433,7 @@ def tool_insert_numbered_list_near_text(
         content_type='list',
         items=list_items or [],
         kind=kind,
+        remove_list_level_tab_stop=remove_list_level_tab_stop,
     )
     return {}
 
@@ -1198,18 +1227,42 @@ def register_tools() -> None:
         )
 
     @mcp.tool(description='Insert a bulleted or numbered list at the end')
-    def insert_list_end(doc_id: str, items: list, kind: str = 'bullet'):
-        return tool_insert_list_end(doc_id, items, kind=kind)
+    def insert_list_end(
+        doc_id: str,
+        items: list,
+        kind: str = 'bullet',
+        remove_list_level_tab_stop: bool = False,
+    ):
+        return tool_insert_list_end(
+            doc_id, items, kind=kind, remove_list_level_tab_stop=remove_list_level_tab_stop
+        )
 
     @mcp.tool(description='Insert a bulleted or numbered list at the start')
-    def insert_list_start(doc_id: str, items: list, kind: str = 'bullet'):
-        return tool_insert_list_start(doc_id, items, kind=kind)
+    def insert_list_start(
+        doc_id: str,
+        items: list,
+        kind: str = 'bullet',
+        remove_list_level_tab_stop: bool = False,
+    ):
+        return tool_insert_list_start(
+            doc_id, items, kind=kind, remove_list_level_tab_stop=remove_list_level_tab_stop
+        )
 
     @mcp.tool(description='Insert a list at the specified paragraph')
     def insert_list_at_paragraph(
-        doc_id: str, items: list, paragraph_index: int, kind: str = 'bullet'
+        doc_id: str,
+        items: list,
+        paragraph_index: int,
+        kind: str = 'bullet',
+        remove_list_level_tab_stop: bool = False,
     ):
-        return tool_insert_list_at_paragraph(doc_id, items, paragraph_index, kind=kind)
+        return tool_insert_list_at_paragraph(
+            doc_id,
+            items,
+            paragraph_index,
+            kind=kind,
+            remove_list_level_tab_stop=remove_list_level_tab_stop,
+        )
 
     @mcp.tool(description='Insert a heading near the found text or paragraph index')
     def insert_header_near_text(
@@ -1244,9 +1297,16 @@ def register_tools() -> None:
         position: str = 'after',
         target_paragraph_index: Optional[int] = None,
         bullet_type: str = 'bullet',
+        remove_list_level_tab_stop: bool = False,
     ):
         return tool_insert_numbered_list_near_text(
-            doc_id, target_text, list_items, position, target_paragraph_index, bullet_type
+            doc_id,
+            target_text,
+            list_items,
+            position,
+            target_paragraph_index,
+            bullet_type,
+            remove_list_level_tab_stop,
         )
 
     @mcp.tool(description='Add an image (base64) at the end of the document')

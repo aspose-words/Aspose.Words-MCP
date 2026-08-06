@@ -1,12 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "opencode-swarm"
-  ],
+  "default_agent": "build",
   "permission": {
     "bash": "allow",
     "edit": "allow",
     "external_directory": "allow",
-    "question": "deny"
+    "question": "deny",
+    "task": "deny"
   }
 }
