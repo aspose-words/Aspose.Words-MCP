@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.8.0] - 2026-10-06
+### Added
+- Exposed `XpsSaveOptions.compression_level` through advanced XPS export options.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.8.0.
+
 ## [26.7.0] - 2026-08-06
 ### Added
 - Exposed `ListLevel.remove_tab_stop` through the existing list insertion MCP surface.

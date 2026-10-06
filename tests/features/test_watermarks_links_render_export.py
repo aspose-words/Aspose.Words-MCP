@@ -48,6 +48,7 @@ def test_watermarks_and_render(fmt, expected_ext, expected_mime_prefix):
         ('md', 'md', 'text/markdown'),
         ('svg', 'svg', 'image/svg+xml'),
         ('pdf', 'pdf', 'application/pdf'),
+        ('xps', 'xps', 'application/vnd.ms-xpsdocument'),
         ('docling', 'json', 'application/json'),
     ],
 )
@@ -108,3 +109,25 @@ def test_pdf_export_generate_form_field_scripts_option():
     assert 'pdf_opts.generate_form_field_scripts = True' in export_source
     assert 'getattr(pdf_opts' not in export_source
     assert 'hasattr(pdf_opts' not in export_source
+
+
+def test_xps_export_compression_level_option():
+    r = srv.tool_create_document('p0-xps-compression.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Sample document for XPS compression test.')
+
+    out = srv.tool_export_base64_advanced(
+        did, fmt='xps', options={'compression_level': 'maximum'}
+    )
+
+    raw = base64.b64decode(out['base64'])
+    assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+    assert out['ext'] == 'xps'
+    assert out['mime'] == 'application/vnd.ms-xpsdocument'
+
+    export_source = Path('core/export.py').read_text(encoding='utf-8')
+    assert 'aw.saving.XpsSaveOptions()' in export_source
+    assert 'xps_opts.compression_level = levels[key]' in export_source
+    assert 'aw.saving.CompressionLevel.MAXIMUM' in export_source
+    assert 'getattr(xps_opts' not in export_source
+    assert 'hasattr(xps_opts' not in export_source
