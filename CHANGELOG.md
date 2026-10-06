@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.8.0] - 2026-10-06
+### Added
+- Exposed `XpsSaveOptions.compression_level` through advanced XPS export options.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.8.0.
+
+### Skipped
+- Post-quantum PFX certificate signing does not require a new MCP parameter because the existing `sign_document` tool already accepts a PFX certificate path and passphrase and delegates signing to Aspose.Words.
+- Corrupted JPEG handling during PDF export is a library-level PDF export behavior improvement; the existing PDF export tools already delegate PDF rendering to Aspose.Words without a separate MCP option.
+- MathML inline fraction rendering and MathML HTML import/export fixes are library-level rendering/import/export behavior improvements covered by the existing HTML insertion, export, and render tools.
+- Remaining 26.8 release issues are bug fixes or conversion/rendering behavior changes with no documented public API beyond `XpsSaveOptions.compression_level`; no additional MCP surface is required.
+
 ## [26.7.0] - 2026-08-06
 ### Added
 - Exposed `ListLevel.remove_tab_stop` through the existing list insertion MCP surface.
