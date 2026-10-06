@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.8.0] - 2026-10-06
+### Added
+- Exposed `XpsSaveOptions.compression_level` through advanced XPS export options.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.8.0.
+
+### Skipped
+- `PdfDigitalSignatureTimestampSettings class` was not exposed because the API diff only reflects documentation/example signature metadata and does not add or change a callable member or property that the MCP server can wire to.
+- The 26.8.0 post-quantum PFX signing, corrupted JPEG PDF export, and MathML rendering improvements were not exposed as separate tools because they introduce no new public API; existing signing, HTML insertion, and export tools use the updated library behavior.
+
 ## [26.7.0] - 2026-08-06
 ### Added
 - Exposed `ListLevel.remove_tab_stop` through the existing list insertion MCP surface.

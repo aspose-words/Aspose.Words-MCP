@@ -44,6 +44,23 @@ def build_pdf_opts(options: Dict[str, Any]) -> Any:
     return pdf_opts
 
 
+def build_xps_opts(options: Dict[str, Any]) -> Any:
+    xps_opts = aw.saving.XpsSaveOptions()
+    compression_level = (options or {}).get('compression_level')
+    if compression_level:
+        compression_levels = {
+            'NORMAL': aw.saving.CompressionLevel.NORMAL,
+            'MAXIMUM': aw.saving.CompressionLevel.MAXIMUM,
+            'FAST': aw.saving.CompressionLevel.FAST,
+            'SUPER_FAST': aw.saving.CompressionLevel.SUPER_FAST,
+        }
+        key = str(compression_level).upper().replace('-', '_').replace(' ', '_')
+        if key not in compression_levels:
+            raise ValueError(f'Unsupported XPS compression_level: {compression_level}')
+        xps_opts.compression_level = compression_levels[key]
+    return xps_opts
+
+
 def build_html_opts(fmt_key: str, embed_resources: bool) -> Any:
     if fmt_key == 'html_fixed':
         opts_hf = aw.saving.HtmlFixedSaveOptions()
@@ -167,6 +184,12 @@ def export_advanced(
             'ext': 'pdf',
             'save_format': aw.SaveFormat.PDF,
             'builder': lambda: build_pdf_opts(opts),
+        },
+        'xps': {
+            'mime': 'application/vnd.ms-xpsdocument',
+            'ext': 'xps',
+            'save_format': aw.SaveFormat.XPS,
+            'builder': lambda: build_xps_opts(opts),
         },
         'docling': {
             'mime': 'application/json',

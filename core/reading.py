@@ -10,7 +10,7 @@ def _estimated_page_count(doc: aw.Document, paragraph_count: int) -> int:
         return 0
 
     pages = 1
-    page_break_char = getattr(aw.ControlChar, 'PAGE_BREAK_CHAR', '\f')
+    page_break_char = aw.ControlChar.PAGE_BREAK_CHAR
     section_page_starts = {
         aw.SectionStart.NEW_PAGE,
         aw.SectionStart.EVEN_PAGE,
