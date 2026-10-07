@@ -299,6 +299,54 @@ def test_sign_document_omitted_optional_sign_options_preserve_defaults(
     ]
 
 
+def test_sign_document_passes_mldsa_pfx_certificate_to_aspose(monkeypatch, tmp_path):
+    source_path = tmp_path / 'source.docx'
+    source_path.write_text('unsigned document')
+    certificate_path = tmp_path / 'ml-dsa-certificate.pfx'
+    certificate_path.write_text('certificate bytes')
+    cert_holder = object()
+    aspose_events: list[tuple[str, object]] = []
+
+    class FakeCertificateHolder:
+        @staticmethod
+        def create(file_name: str, passphrase: str):
+            aspose_events.append(('holder', (file_name, passphrase)))
+            return cert_holder
+
+    class FakeDigitalSignatureUtil:
+        @staticmethod
+        def sign(
+            src_file_name: str, dst_file_name: str, cert_holder, sign_options
+        ) -> None:
+            aspose_events.append(('sign', (src_file_name, dst_file_name, cert_holder)))
+            Path(dst_file_name).write_text('signed document')
+
+    monkeypatch.setattr(_signatures, 'ensure_path', lambda doc_id: source_path)
+    monkeypatch.setattr(
+        _signatures.aw,
+        'digitalsignatures',
+        types.SimpleNamespace(
+            CertificateHolder=FakeCertificateHolder,
+            DigitalSignatureUtil=FakeDigitalSignatureUtil,
+            SignOptions=object,
+        ),
+    )
+
+    sign_succeeded = _signatures.sign_document(
+        'doc-id',
+        str(certificate_path),
+        'certificate-secret',
+    )
+
+    signed_path = source_path.with_name(f'{source_path.stem}.signed{source_path.suffix}')
+    assert sign_succeeded is True
+    assert source_path.read_text() == 'signed document'
+    assert aspose_events == [
+        ('holder', (str(certificate_path), 'certificate-secret')),
+        ('sign', (str(source_path), str(signed_path), cert_holder)),
+    ]
+
+
 def test_tool_sign_document_forwards_26_5_sign_options(monkeypatch):
     signature_calls = []
     certificate_path = str(Path('certificates') / 'signing.pfx')

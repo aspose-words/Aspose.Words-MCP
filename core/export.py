@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import aspose.words as aw
@@ -29,19 +31,123 @@ def export_markdown(doc: Any) -> bytes:
 
 def build_pdf_opts(options: Dict[str, Any]) -> Any:
     pdf_opts = aw.saving.PdfSaveOptions()
+    opts = options or {}
     comp = (options or {}).get('compliance')
     if comp:
         m = {
             'PDF_A1A': aw.saving.PdfCompliance.PDF_A1A,
             'PDF_A1B': aw.saving.PdfCompliance.PDF_A1B,
         }
-        key = str(comp).upper()
+        key = str(comp).strip().upper().replace('-', '_').replace(' ', '_')
         key_norm = key.replace('_A_', 'A')
+        key_flat = key.replace('_', '')
         if key_norm in m:
             pdf_opts.compliance = m[key_norm]
-    if (options or {}).get('generate_form_field_scripts'):
+        elif key_flat in {'PDFA1A', 'PDFA1B'}:
+            pdf_opts.compliance = m[f'PDF_A1{key_flat[-1]}']
+    if opts.get('generate_form_field_scripts'):
         pdf_opts.generate_form_field_scripts = True
+    if 'digital_signature' in opts:
+        pdf_opts.digital_signature_details = _build_pdf_signature_details(
+            opts['digital_signature']
+        )
     return pdf_opts
+
+
+def _build_pdf_signature_details(digital_signature: Any) -> Any:
+    if not isinstance(digital_signature, dict):
+        raise ValueError('digital_signature must be an object')
+
+    certificate_path = digital_signature.get('certificate_path')
+    if certificate_path is None or not str(certificate_path).strip():
+        raise ValueError('digital_signature.certificate_path must be non-empty')
+
+    cert_path = Path(str(certificate_path).strip())
+    if not cert_path.exists():
+        raise FileNotFoundError(f'Certificate file not found: {certificate_path}')
+
+    timestamp_settings = None
+    if 'timestamp' in digital_signature:
+        timestamp_settings = _build_pdf_timestamp_settings(digital_signature['timestamp'])
+    signature_date = _parse_pdf_signature_date(digital_signature.get('signature_date'))
+
+    certificate_holder = aw.digitalsignatures.CertificateHolder.create(
+        str(cert_path),
+        str(digital_signature.get('certificate_passphrase') or ''),
+    )
+    signature_details = aw.saving.PdfDigitalSignatureDetails(
+        certificate_holder,
+        str(digital_signature.get('reason') or ''),
+        str(digital_signature.get('location') or ''),
+        signature_date,
+    )
+
+    if timestamp_settings is not None:
+        signature_details.timestamp_settings = timestamp_settings
+
+    return signature_details
+
+
+def _parse_pdf_signature_date(signature_date: Any) -> datetime:
+    if signature_date is None:
+        return datetime.now()
+    if isinstance(signature_date, datetime):
+        return signature_date
+    if not str(signature_date).strip():
+        raise ValueError('digital_signature.signature_date must be non-empty when provided')
+
+    normalized_date = str(signature_date).strip()
+    if normalized_date.endswith('Z'):
+        normalized_date = f'{normalized_date[:-1]}+00:00'
+    try:
+        return datetime.fromisoformat(normalized_date)
+    except ValueError as exc:
+        raise ValueError(
+            'digital_signature.signature_date must be an ISO 8601 datetime string'
+        ) from exc
+
+
+def _build_pdf_timestamp_settings(timestamp: Any) -> Any:
+    if not isinstance(timestamp, dict):
+        raise ValueError('digital_signature.timestamp must be an object')
+
+    server_url = timestamp.get('server_url')
+    if server_url is None or not str(server_url).strip():
+        raise ValueError('digital_signature.timestamp.server_url must be non-empty')
+
+    server_url_value = str(server_url).strip()
+    user_name = str(timestamp.get('user_name') or '')
+    password = str(timestamp.get('password') or '')
+    timeout_seconds = timestamp.get('timeout_seconds')
+    if timeout_seconds is None:
+        return aw.saving.PdfDigitalSignatureTimestampSettings(
+            server_url_value,
+            user_name,
+            password,
+        )
+
+    timeout = _parse_timestamp_timeout_seconds(timeout_seconds)
+    return aw.saving.PdfDigitalSignatureTimestampSettings(
+        server_url_value,
+        user_name,
+        password,
+        timeout,
+    )
+
+
+def _parse_timestamp_timeout_seconds(timeout_seconds: Any) -> timedelta:
+    if isinstance(timeout_seconds, str) and not timeout_seconds.strip():
+        raise ValueError('digital_signature.timestamp.timeout_seconds must be greater than 0')
+
+    try:
+        seconds = float(timeout_seconds)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            'digital_signature.timestamp.timeout_seconds must be greater than 0'
+        ) from exc
+    if seconds <= 0:
+        raise ValueError('digital_signature.timestamp.timeout_seconds must be greater than 0')
+    return timedelta(seconds=seconds)
 
 
 def build_html_opts(fmt_key: str, embed_resources: bool) -> Any:
@@ -57,6 +163,29 @@ def build_html_opts(fmt_key: str, embed_resources: bool) -> Any:
     if not embed_resources:
         ensure_resources_dir('html', opts)
     return opts
+
+
+def _build_xps_opts(options: Dict[str, Any]) -> Any:
+    xps_opts = aw.saving.XpsSaveOptions()
+    compression_level = (options or {}).get('compression_level')
+    if compression_level is None:
+        return xps_opts
+
+    key = str(compression_level).strip().lower().replace('-', '_').replace(' ', '_')
+    compression_levels = {
+        'normal': aw.saving.CompressionLevel.NORMAL,
+        'maximum': aw.saving.CompressionLevel.MAXIMUM,
+        'fast': aw.saving.CompressionLevel.FAST,
+        'super_fast': aw.saving.CompressionLevel.SUPER_FAST,
+    }
+    if key not in compression_levels:
+        accepted = ', '.join(compression_levels)
+        raise ValueError(
+            f'Unsupported XPS compression_level: {compression_level}. Use one of: {accepted}.'
+        )
+
+    xps_opts.compression_level = compression_levels[key]
+    return xps_opts
 
 
 def export(doc_id: str, fmt: str = 'docx') -> Tuple[bytes, str, str]:
@@ -167,6 +296,12 @@ def export_advanced(
             'ext': 'pdf',
             'save_format': aw.SaveFormat.PDF,
             'builder': lambda: build_pdf_opts(opts),
+        },
+        'xps': {
+            'mime': 'application/vnd.ms-xpsdocument',
+            'ext': 'xps',
+            'save_format': aw.SaveFormat.XPS,
+            'builder': lambda: _build_xps_opts(opts),
         },
         'docling': {
             'mime': 'application/json',

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.8.0] - 2026-10-07
+### Added
+- Added advanced PDF export signing with `PdfDigitalSignatureDetails` and timestamp server settings.
+- Exposed XPS export through the advanced export MCP surface, including `compression_level` values `normal`, `maximum`, `fast`, and `super_fast`.
+
+### Changed
+- Aligned digital-signature export behavior with the Aspose.Words 26.8 timestamp API.
+- Aligned server versioning with Aspose.Words 26.8.0.
+
 ## [26.7.0] - 2026-08-06
 ### Added
 - Exposed `ListLevel.remove_tab_stop` through the existing list insertion MCP surface.
