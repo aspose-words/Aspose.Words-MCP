@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.8.0] - 2026-10-07
+### Added
+- Exposed `XpsSaveOptions.compression_level` through advanced XPS export options.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.8.0.
+
+### Skipped
+- `Metered.get_billing_status` removal required no server change because this API is not used in the repository and is not exposed through MCP tools.
+- `PdfDigitalSignatureTimestampSettings` API-reference signature change was not exposed because the diff does not identify a changed callable member, the release notes provide no timestamp-signing scenario, and the current MCP server has no PDF timestamp-signing surface to adapt.
+
 ## [26.7.0] - 2026-08-06
 ### Added
 - Exposed `ListLevel.remove_tab_stop` through the existing list insertion MCP surface.

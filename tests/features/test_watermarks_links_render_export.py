@@ -1,11 +1,13 @@
 import base64
 import json
+import types
 from pathlib import Path
 
 import pytest
 
 pytest.importorskip('aspose.words')
 import mcp_server as srv
+from core import export as _export
 
 
 def _png_1x1_b64():
@@ -48,6 +50,7 @@ def test_watermarks_and_render(fmt, expected_ext, expected_mime_prefix):
         ('md', 'md', 'text/markdown'),
         ('svg', 'svg', 'image/svg+xml'),
         ('pdf', 'pdf', 'application/pdf'),
+        ('xps', 'xps', 'application/vnd.ms-xpsdocument'),
         ('docling', 'json', 'application/json'),
     ],
 )
@@ -58,6 +61,8 @@ def test_export_base64_advanced_formats(fmt, expected_ext, expected_mime):
     export_calls = [{'embed_resources': True}] if fmt == 'html' else [None]
     if fmt == 'pdf':
         export_calls = [None, {'enable_text_shaping': True}]
+    if fmt == 'xps':
+        export_calls = [None, {'compression_level': 'maximum'}]
 
     for options in export_calls:
         out = srv.tool_export_base64_advanced(did, fmt=fmt, options=options)
@@ -108,3 +113,99 @@ def test_pdf_export_generate_form_field_scripts_option():
     assert 'pdf_opts.generate_form_field_scripts = True' in export_source
     assert 'getattr(pdf_opts' not in export_source
     assert 'hasattr(pdf_opts' not in export_source
+
+
+@pytest.mark.parametrize(
+    'compression_level, expected_value',
+    [
+        ('normal', 'NORMAL'),
+        ('MAXIMUM', 'MAXIMUM'),
+        ('fast', 'FAST'),
+        ('super fast', 'SUPER_FAST'),
+        ('super-fast', 'SUPER_FAST'),
+        ('super_fast', 'SUPER_FAST'),
+    ],
+)
+def test_xps_export_compression_level_supported_values(
+    monkeypatch, compression_level, expected_value
+):
+    class FakeXpsSaveOptions:
+        def __init__(self):
+            self.compression_level = None
+
+    fake_aw = types.SimpleNamespace(
+        saving=types.SimpleNamespace(
+            XpsSaveOptions=FakeXpsSaveOptions,
+            CompressionLevel=types.SimpleNamespace(
+                NORMAL='NORMAL',
+                MAXIMUM='MAXIMUM',
+                FAST='FAST',
+                SUPER_FAST='SUPER_FAST',
+            ),
+        )
+    )
+    monkeypatch.setattr(_export, 'aw', fake_aw)
+
+    xps_options = _export.build_xps_opts({'compression_level': compression_level})
+
+    assert xps_options.compression_level == expected_value
+
+
+@pytest.mark.parametrize('compression_level', ['', '   ', 'balanced'])
+def test_xps_export_compression_level_rejects_invalid_values(
+    monkeypatch, compression_level
+):
+    class FakeXpsSaveOptions:
+        def __init__(self):
+            self.compression_level = None
+
+    fake_aw = types.SimpleNamespace(
+        saving=types.SimpleNamespace(
+            XpsSaveOptions=FakeXpsSaveOptions,
+            CompressionLevel=types.SimpleNamespace(
+                NORMAL='NORMAL',
+                MAXIMUM='MAXIMUM',
+                FAST='FAST',
+                SUPER_FAST='SUPER_FAST',
+            ),
+        )
+    )
+    monkeypatch.setattr(_export, 'aw', fake_aw)
+
+    with pytest.raises(
+        ValueError,
+        match='Accepted values: normal, maximum, fast, super_fast',
+    ):
+        _export.build_xps_opts({'compression_level': compression_level})
+
+
+def test_xps_export_omitted_compression_level_preserves_default(monkeypatch):
+    class FakeXpsSaveOptions:
+        def __init__(self):
+            self.compression_level = 'DEFAULT'
+
+    fake_aw = types.SimpleNamespace(
+        saving=types.SimpleNamespace(
+            XpsSaveOptions=FakeXpsSaveOptions,
+            CompressionLevel=types.SimpleNamespace(
+                NORMAL='NORMAL',
+                MAXIMUM='MAXIMUM',
+                FAST='FAST',
+                SUPER_FAST='SUPER_FAST',
+            ),
+        )
+    )
+    monkeypatch.setattr(_export, 'aw', fake_aw)
+
+    xps_options = _export.build_xps_opts({})
+
+    assert xps_options.compression_level == 'DEFAULT'
+
+
+def test_xps_export_uses_explicit_compression_level_api():
+    export_source = Path('core/export.py').read_text(encoding='utf-8')
+    assert 'xps_opts.compression_level = _resolve_xps_compression_level' in export_source
+    assert 'aw.saving.XpsSaveOptions()' in export_source
+    assert 'aw.saving.CompressionLevel.MAXIMUM' in export_source
+    assert 'getattr(xps_opts' not in export_source
+    assert 'hasattr(xps_opts' not in export_source
