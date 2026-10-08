@@ -92,7 +92,7 @@ def build_alias_functions(
         try:
             data = Path(image_path).read_bytes()
         except FileNotFoundError:
-            raise FileNotFoundError(f'Image not found: {image_path}')
+            raise FileNotFoundError(f'Image not found: {image_path}') from None
         _content.insert_image(
             did,
             data,

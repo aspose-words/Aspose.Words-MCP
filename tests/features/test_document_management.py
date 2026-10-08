@@ -291,7 +291,7 @@ def test_merge_true_resolve_theme_colors_imports_sections_with_named_options(
     assert len(result_doc.import_node_calls) == 2
     assert result_doc.sections.added_sections == ['imported-section-b-1', 'imported-section-b-2']
     for expected_section, import_node_call in zip(
-        ['section-b-1', 'section-b-2'], result_doc.import_node_calls
+        ['section-b-1', 'section-b-2'], result_doc.import_node_calls, strict=True
     ):
         assert set(import_node_call) == {
             'src_node',

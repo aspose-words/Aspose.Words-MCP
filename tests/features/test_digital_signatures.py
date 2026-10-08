@@ -74,9 +74,7 @@ def test_list_digital_signatures_extracts_26_5_metadata(monkeypatch, tmp_path):
     ]
 
 
-def test_list_digital_signatures_returns_empty_list_for_empty_collection(
-    monkeypatch, tmp_path
-):
+def test_list_digital_signatures_returns_empty_list_for_empty_collection(monkeypatch, tmp_path):
     source_path = tmp_path / 'unsigned.docx'
     source_path.write_text('unsigned document')
     signature_events: list[tuple[str, object]] = []
@@ -153,9 +151,7 @@ def test_sign_document_validates_certificate_path_before_aspose_calls(
     assert aspose_calls == []
 
 
-def test_sign_document_assigns_26_5_sign_options_and_replaces_source(
-    monkeypatch, tmp_path
-):
+def test_sign_document_assigns_26_5_sign_options_and_replaces_source(monkeypatch, tmp_path):
     source_path = tmp_path / 'source.docx'
     source_path.write_text('unsigned document')
     certificate_path = tmp_path / 'certificate.pfx'
@@ -176,9 +172,7 @@ def test_sign_document_assigns_26_5_sign_options_and_replaces_source(
 
     class FakeDigitalSignatureUtil:
         @staticmethod
-        def sign(
-            src_file_name: str, dst_file_name: str, cert_holder, sign_options
-        ) -> None:
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
             aspose_events.append(('sign', (src_file_name, dst_file_name, cert_holder)))
             assert sign_options.application_version == '26.5.0-app'
             assert sign_options.color_depth == 32
@@ -227,9 +221,7 @@ def test_sign_document_assigns_26_5_sign_options_and_replaces_source(
     ]
 
 
-def test_sign_document_omitted_optional_sign_options_preserve_defaults(
-    monkeypatch, tmp_path
-):
+def test_sign_document_omitted_optional_sign_options_preserve_defaults(monkeypatch, tmp_path):
     source_path = tmp_path / 'source.docx'
     source_path.write_text('unsigned document')
     certificate_path = tmp_path / 'certificate.pfx'
@@ -253,20 +245,22 @@ def test_sign_document_omitted_optional_sign_options_preserve_defaults(
             object.__setattr__(self, 'windows_version', 'default-windows')
 
         def __setattr__(self, name: str, assigned_object: object) -> None:
-            if name in {
-                'color_depth',
-                'horizontal_resolution',
-                'vertical_resolution',
-            } and assigned_object is None:
+            if (
+                name
+                in {
+                    'color_depth',
+                    'horizontal_resolution',
+                    'vertical_resolution',
+                }
+                and assigned_object is None
+            ):
                 raise AssertionError(f'{name} must preserve its integer default')
             aspose_events.append((f'assign:{name}', assigned_object))
             object.__setattr__(self, name, assigned_object)
 
     class FakeDigitalSignatureUtil:
         @staticmethod
-        def sign(
-            src_file_name: str, dst_file_name: str, cert_holder, sign_options
-        ) -> None:
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
             aspose_events.append(('sign', (src_file_name, dst_file_name, cert_holder)))
             assert sign_options.application_version == 'default-app'
             assert sign_options.color_depth == 24
@@ -467,7 +461,7 @@ def test_registered_get_digital_signatures_delegates_and_returns_response(
 ):
     captured_tool_functions = {}
     tool_signature_calls = []
-    expected_response = {
+    expected_response: dict[str, object] = {
         'signatures': [
             {
                 'application_version': '26.5.0-app',

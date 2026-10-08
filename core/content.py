@@ -186,10 +186,7 @@ def _reject_stacked_quantifiers(pattern: str) -> None:
 
 
 def _is_valid_quantifier_body(body: str) -> bool:
-    for char in body:
-        if not (char.isdigit() or char == ','):
-            return False
-    return True
+    return all(char.isdigit() or char == ',' for char in body)
 
 
 def find_heading_style_by_name(doc: aw.Document, level: int):
@@ -458,7 +455,7 @@ def add_page_break(doc_id: str, where: str = 'end', paragraph_index: Optional[in
 
 def insert_list(
     doc_id: str,
-    items: List[str] = None,
+    items: Optional[List[str]] = None,
     kind: str = 'bullet',
     where: str = 'end',
     paragraph_index: Optional[int] = None,

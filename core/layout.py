@@ -15,7 +15,7 @@ _PAPER_SIZE_ALLOWLIST = {
 }
 
 
-def _resolve_paper_size(paper: str) -> aw.PaperSize:
+def _resolve_paper_size(paper: str) -> int:
     paper_key = str(paper).strip().upper()
     paper_size = _PAPER_SIZE_ALLOWLIST.get(paper_key)
     if paper_size is None:

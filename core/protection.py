@@ -40,7 +40,7 @@ def protect_restrict(
     doc = aw.Document(str(path))
     if ranges:
         paras = doc.get_child_nodes(aw.NodeType.PARAGRAPH, True)
-        for i, r in enumerate(ranges):
+        for r in ranges:
             pidx = r.get('paragraphIndex')
             if pidx is not None and 0 <= pidx < paras.count:
                 start = max(0, int(r.get('start', 0)))

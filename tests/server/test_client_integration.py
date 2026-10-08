@@ -109,8 +109,7 @@ async def _save_exported_to_file(result_file_path, client, doc_id):
     raw = base64.b64decode(exported.data['base64'])
     assert isinstance(raw, (bytes, bytearray))
     assert len(raw) > 0
-    with open(result_file_path, 'wb') as f:
-        f.write(raw)
+    await asyncio.to_thread(Path(result_file_path).write_bytes, raw)
 
 
 def test_client_creates_document(mcp_client_config, result_file_path):
@@ -552,8 +551,7 @@ def test_export_base64_advanced_docling(mcp_client_config, result_file_path):
             assert isinstance(payload, (dict, list))
             assert 'Docling export payload' in json.dumps(payload)
 
-            with open(result_file_path, 'wb') as f:
-                f.write(raw)
+            await asyncio.to_thread(Path(result_file_path).write_bytes, raw)
 
     _run_and_assert_file(result_file_path, run_client)
 
@@ -599,8 +597,7 @@ def test_export_base64_advanced_pdf_text_shaping(mcp_client_config, result_file_
             assert isinstance(decoded_shaped_pdf_bytes, (bytes, bytearray))
             assert len(decoded_shaped_pdf_bytes) > 0
 
-            with open(result_file_path, 'wb') as f:
-                f.write(decoded_shaped_pdf_bytes)
+            await asyncio.to_thread(Path(result_file_path).write_bytes, decoded_shaped_pdf_bytes)
 
     _run_and_assert_file(result_file_path, run_client)
 
