@@ -48,6 +48,7 @@ def test_watermarks_and_render(fmt, expected_ext, expected_mime_prefix):
         ('md', 'md', 'text/markdown'),
         ('svg', 'svg', 'image/svg+xml'),
         ('pdf', 'pdf', 'application/pdf'),
+        ('xps', 'xps', 'application/vnd.ms-xpsdocument'),
         ('docling', 'json', 'application/json'),
     ],
 )
@@ -108,3 +109,75 @@ def test_pdf_export_generate_form_field_scripts_option():
     assert 'pdf_opts.generate_form_field_scripts = True' in export_source
     assert 'getattr(pdf_opts' not in export_source
     assert 'hasattr(pdf_opts' not in export_source
+
+
+def test_xps_export_with_compression_level():
+    r = srv.tool_create_document('p0-xps-compression.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'XPS compression')
+
+    out = srv.tool_export_base64_advanced(did, fmt='xps', options={'compression_level': 'MAXIMUM'})
+
+    raw = base64.b64decode(out['base64'])
+    assert isinstance(raw, (bytes, bytearray)) and len(raw) > 0
+    assert out['ext'] == 'xps'
+    assert out['mime'] == 'application/vnd.ms-xpsdocument'
+
+    export_source = Path('core/export.py').read_text(encoding='utf-8')
+    assert 'xps_opts = aw.saving.XpsSaveOptions()' in export_source
+    assert "'MAXIMUM': aw.saving.CompressionLevel.MAXIMUM" in export_source
+    assert 'xps_opts.compression_level = compression_levels[key]' in export_source
+    assert 'getattr(xps' not in export_source
+    assert 'hasattr(xps' not in export_source
+    assert 'getattr(aw.saving.CompressionLevel' not in export_source
+    assert 'hasattr(aw.saving.CompressionLevel' not in export_source
+
+
+@pytest.mark.parametrize(
+    'spelling,expected_level',
+    [
+        ('NORMAL', srv._export.aw.saving.CompressionLevel.NORMAL),
+        ('maximum', srv._export.aw.saving.CompressionLevel.MAXIMUM),
+        ('Fast', srv._export.aw.saving.CompressionLevel.FAST),
+        ('super fast', srv._export.aw.saving.CompressionLevel.SUPER_FAST),
+        ('super-fast', srv._export.aw.saving.CompressionLevel.SUPER_FAST),
+    ],
+)
+def test_xps_compression_level_supported_and_normalized(spelling, expected_level):
+    opts = srv._export.build_xps_opts({'compression_level': spelling})
+
+    assert opts.compression_level == expected_level
+
+
+@pytest.mark.parametrize('compression_level', ['', ' ', 'ULTRA'])
+def test_xps_compression_level_invalid_and_blank_values(compression_level):
+    with pytest.raises(ValueError, match='Unsupported XPS compression_level'):
+        srv._export.build_xps_opts({'compression_level': compression_level})
+
+
+def test_xps_compression_level_invalid_value_rejected_before_save(monkeypatch):
+    r = srv.tool_create_document('p0-xps-invalid-before-save.docx')
+    did = r['docId']
+    srv.tool_add_paragraph(did, 'Invalid XPS compression')
+    save_called = False
+
+    class SavingDoc:
+        def __init__(self, file_path):
+            self.file_path = file_path
+
+        def save(self, *args, **kwargs):
+            nonlocal save_called
+            save_called = True
+
+    monkeypatch.setattr(srv._export.aw, 'Document', SavingDoc)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Unsupported XPS compression_level: 'not-valid'. "
+            'Supported values: NORMAL, MAXIMUM, FAST, SUPER_FAST.'
+        ),
+    ):
+        srv.tool_export_base64_advanced(did, fmt='xps', options={'compression_level': 'not-valid'})
+
+    assert save_called is False

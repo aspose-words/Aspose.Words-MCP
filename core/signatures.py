@@ -45,7 +45,7 @@ def sign_document(
         raise FileNotFoundError(f'Certificate file not found: {certificate_path}')
 
     holder = aw.digitalsignatures.CertificateHolder.create(
-        str(cert_path),
+        certificate_path,
         certificate_password,
     )
     sign_options = aw.digitalsignatures.SignOptions()

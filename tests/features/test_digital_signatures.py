@@ -1,11 +1,22 @@
+import asyncio
 import types
 from pathlib import Path
 
 import pytest
 
 pytest.importorskip('aspose.words')
+from fastmcp import Client, FastMCP
+
 import mcp_server as srv
 from core import signatures as _signatures
+
+
+@pytest.fixture
+def in_process_mcp_client_config(monkeypatch):
+    test_mcp = FastMCP('Aspose.Words MCP test')
+    monkeypatch.setattr(srv, 'mcp', test_mcp)
+    srv.register_tools()
+    return test_mcp
 
 
 def test_list_digital_signatures_extracts_26_5_metadata(monkeypatch, tmp_path):
@@ -74,9 +85,7 @@ def test_list_digital_signatures_extracts_26_5_metadata(monkeypatch, tmp_path):
     ]
 
 
-def test_list_digital_signatures_returns_empty_list_for_empty_collection(
-    monkeypatch, tmp_path
-):
+def test_list_digital_signatures_returns_empty_list_for_empty_collection(monkeypatch, tmp_path):
     source_path = tmp_path / 'unsigned.docx'
     source_path.write_text('unsigned document')
     signature_events: list[tuple[str, object]] = []
@@ -153,9 +162,7 @@ def test_sign_document_validates_certificate_path_before_aspose_calls(
     assert aspose_calls == []
 
 
-def test_sign_document_assigns_26_5_sign_options_and_replaces_source(
-    monkeypatch, tmp_path
-):
+def test_sign_document_assigns_26_5_sign_options_and_replaces_source(monkeypatch, tmp_path):
     source_path = tmp_path / 'source.docx'
     source_path.write_text('unsigned document')
     certificate_path = tmp_path / 'certificate.pfx'
@@ -176,9 +183,7 @@ def test_sign_document_assigns_26_5_sign_options_and_replaces_source(
 
     class FakeDigitalSignatureUtil:
         @staticmethod
-        def sign(
-            src_file_name: str, dst_file_name: str, cert_holder, sign_options
-        ) -> None:
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
             aspose_events.append(('sign', (src_file_name, dst_file_name, cert_holder)))
             assert sign_options.application_version == '26.5.0-app'
             assert sign_options.color_depth == 32
@@ -227,9 +232,53 @@ def test_sign_document_assigns_26_5_sign_options_and_replaces_source(
     ]
 
 
-def test_sign_document_omitted_optional_sign_options_preserve_defaults(
+def test_sign_document_passes_post_quantum_pfx_through_without_algorithm_filter(
     monkeypatch, tmp_path
 ):
+    source_path = tmp_path / 'source.docx'
+    source_path.write_text('unsigned document')
+    certificate_file = tmp_path / 'ml-dsa-post-quantum.pfx'
+    certificate_file.write_text('post-quantum certificate bytes')
+    certificate_path = f'{tmp_path}/./ml-dsa-post-quantum.pfx'
+    cert_holder = object()
+    aspose_events: list[tuple[str, object]] = []
+
+    class FakeCertificateHolder:
+        @staticmethod
+        def create(file_name: str, passphrase: str):
+            aspose_events.append(('holder', (file_name, passphrase)))
+            return cert_holder
+
+    class FakeDigitalSignatureUtil:
+        @staticmethod
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
+            aspose_events.append(('sign', (src_file_name, dst_file_name, cert_holder)))
+            Path(dst_file_name).write_text('signed document')
+
+    monkeypatch.setattr(_signatures, 'ensure_path', lambda doc_id: source_path)
+    monkeypatch.setattr(
+        _signatures.aw,
+        'digitalsignatures',
+        types.SimpleNamespace(
+            CertificateHolder=FakeCertificateHolder,
+            DigitalSignatureUtil=FakeDigitalSignatureUtil,
+            SignOptions=object,
+        ),
+    )
+
+    sign_succeeded = _signatures.sign_document('doc-id', certificate_path, 'ml-dsa-secret')
+
+    signed_path = source_path.with_name(f'{source_path.stem}.signed{source_path.suffix}')
+    assert sign_succeeded is True
+    assert source_path.read_text() == 'signed document'
+    assert not signed_path.exists()
+    assert aspose_events == [
+        ('holder', (certificate_path, 'ml-dsa-secret')),
+        ('sign', (str(source_path), str(signed_path), cert_holder)),
+    ]
+
+
+def test_sign_document_omitted_optional_sign_options_preserve_defaults(monkeypatch, tmp_path):
     source_path = tmp_path / 'source.docx'
     source_path.write_text('unsigned document')
     certificate_path = tmp_path / 'certificate.pfx'
@@ -253,20 +302,22 @@ def test_sign_document_omitted_optional_sign_options_preserve_defaults(
             object.__setattr__(self, 'windows_version', 'default-windows')
 
         def __setattr__(self, name: str, assigned_object: object) -> None:
-            if name in {
-                'color_depth',
-                'horizontal_resolution',
-                'vertical_resolution',
-            } and assigned_object is None:
+            if (
+                name
+                in {
+                    'color_depth',
+                    'horizontal_resolution',
+                    'vertical_resolution',
+                }
+                and assigned_object is None
+            ):
                 raise AssertionError(f'{name} must preserve its integer default')
             aspose_events.append((f'assign:{name}', assigned_object))
             object.__setattr__(self, name, assigned_object)
 
     class FakeDigitalSignatureUtil:
         @staticmethod
-        def sign(
-            src_file_name: str, dst_file_name: str, cert_holder, sign_options
-        ) -> None:
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
             aspose_events.append(('sign', (src_file_name, dst_file_name, cert_holder)))
             assert sign_options.application_version == 'default-app'
             assert sign_options.color_depth == 24
@@ -350,6 +401,76 @@ def test_tool_sign_document_forwards_26_5_sign_options(monkeypatch):
             'certificate_path': certificate_path,
             'certificate_passphrase': 'certificate-secret',
             'application_version': '26.5.0-app',
+            'color_depth': 32,
+            'horizontal_resolution': 300,
+            'office_version': 'Office 2024',
+            'vertical_resolution': 600,
+            'windows_version': 'Windows 11',
+        }
+    ]
+
+
+def test_mcp_client_sign_document_forwards_26_8_pfx_signing_scenario(
+    monkeypatch, in_process_mcp_client_config
+):
+    signature_calls = []
+    certificate_path = str(Path('certificates') / 'ml-dsa-post-quantum.pfx')
+
+    def fake_sign_document(
+        doc_id: str,
+        certificate_path: str,
+        certificate_passphrase: str = '',
+        application_version: str | None = None,
+        color_depth: int | None = None,
+        horizontal_resolution: int | None = None,
+        office_version: str | None = None,
+        vertical_resolution: int | None = None,
+        windows_version: str | None = None,
+    ) -> bool:
+        signature_calls.append(
+            {
+                'doc_id': doc_id,
+                'certificate_path': certificate_path,
+                'certificate_passphrase': certificate_passphrase,
+                'application_version': application_version,
+                'color_depth': color_depth,
+                'horizontal_resolution': horizontal_resolution,
+                'office_version': office_version,
+                'vertical_resolution': vertical_resolution,
+                'windows_version': windows_version,
+            }
+        )
+        return True
+
+    monkeypatch.setattr(srv._signatures, 'sign_document', fake_sign_document)
+
+    async def call_sign_document_tool() -> None:
+        async with Client(in_process_mcp_client_config) as client:
+            signing_response = await client.call_tool(
+                name='sign_document',
+                arguments={
+                    'doc_id': 'doc-id',
+                    'certificate_path': certificate_path,
+                    'certificate_passphrase': 'ml-dsa-secret',
+                    'application_version': '26.8.0-app',
+                    'color_depth': 32,
+                    'horizontal_resolution': 300,
+                    'office_version': 'Office 2024',
+                    'vertical_resolution': 600,
+                    'windows_version': 'Windows 11',
+                },
+            )
+            assert hasattr(signing_response, 'data')
+            assert signing_response.data == {}
+
+    asyncio.run(call_sign_document_tool())
+
+    assert signature_calls == [
+        {
+            'doc_id': 'doc-id',
+            'certificate_path': certificate_path,
+            'certificate_passphrase': 'ml-dsa-secret',
+            'application_version': '26.8.0-app',
             'color_depth': 32,
             'horizontal_resolution': 300,
             'office_version': 'Office 2024',
@@ -505,3 +626,32 @@ def test_registered_get_digital_signatures_delegates_and_returns_response(
 
     assert registered_response == expected_response
     assert tool_signature_calls == ['doc-id']
+
+
+def test_26_8_digital_signing_alignment_does_not_add_pdf_timestamp_surface():
+    source_files = [
+        Path('core/signatures.py'),
+        Path('mcp_server.py'),
+        Path('core/export.py'),
+    ]
+    production_source = '\n'.join(
+        source_file.read_text(encoding='utf-8') for source_file in source_files
+    )
+
+    forbidden_surface_terms = [
+        'PdfDigitalSignatureTimestampSettings',
+        'PdfDigitalSignatureDetails',
+        'export_signed_pdf_base64',
+        'timestamp_server_url',
+        'timestamp_username',
+        'timestamp_password',
+        'timestamp_credentials',
+    ]
+    for forbidden_surface_term in forbidden_surface_terms:
+        assert forbidden_surface_term not in production_source
+
+    signatures_source = Path('core/signatures.py').read_text(encoding='utf-8')
+    assert 'CertificateHolder.create(' in signatures_source
+    assert 'DigitalSignatureUtil.sign(' in signatures_source
+    assert 'try:' not in signatures_source
+    assert 'except' not in signatures_source
