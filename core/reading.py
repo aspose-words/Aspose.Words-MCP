@@ -171,8 +171,5 @@ def stats(doc_id: str) -> Dict[str, int]:
 
 
 def list_documents() -> list:
-    ids: List[str] = []
     data_dir = Path(_docs().get_data_dir())
-    for p in data_dir.glob('*.docx'):
-        ids.append(p.stem)
-    return ids
+    return [p.stem for p in data_dir.glob('*.docx')]

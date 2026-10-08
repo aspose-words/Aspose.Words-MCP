@@ -183,7 +183,8 @@ def export_advanced(
     if spec.get('custom'):
         data = export_markdown(doc)
         return data, spec['mime'], spec['ext']
-    save_opts = spec.get('builder')() if spec.get('builder') else None
+    builder = spec.get('builder')
+    save_opts = builder() if builder is not None else None
     out = BytesIO()
     if save_opts is not None:
         doc.save(out, save_opts)

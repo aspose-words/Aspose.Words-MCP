@@ -188,10 +188,7 @@ def notes_delete_by_anchor(
         return 0
     if occurrence is not None:
         idx = int(occurrence) - 1
-        if 0 <= idx < len(indices):
-            target_indices = [indices[idx]]
-        else:
-            target_indices = []
+        target_indices = [indices[idx]] if 0 <= idx < len(indices) else []
     else:
         target_indices = indices if remove_all else [indices[0]]
     removed = 0

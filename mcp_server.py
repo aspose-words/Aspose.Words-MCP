@@ -1371,9 +1371,9 @@ def register_tools() -> None:
     def format_table(
         doc_id: str,
         table_index: int,
-        has_header_row: bool = None,
-        border_style: str = None,
-        shading: list = None,
+        has_header_row: Optional[bool] = None,
+        border_style: Optional[str] = None,
+        shading: Optional[list] = None,
     ):
         return tool_format_table(
             doc_id,

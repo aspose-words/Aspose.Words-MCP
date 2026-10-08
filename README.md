@@ -102,6 +102,19 @@ aspose-words-mcp
 
 On start, the server prints the listening address.
 
+## Development Validation
+
+Install development dependencies with `python -m pip install -e '.[dev]'`, then run:
+
+```bash
+python -m pytest -q
+python -m ruff check .
+python -m ruff format . --check
+python -m pyright --pythonpath .venv/bin/python
+```
+
+All four checks are required before merging a server update.
+
 ## Tools
 
 See full list and signatures in `mcp_server.py` (function `register_tools`) and tests in `tests/features/*`.
