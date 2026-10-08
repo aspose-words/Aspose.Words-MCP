@@ -7,6 +7,7 @@ from typing import Optional
 from fastmcp import FastMCP
 
 from core import comments as _comments
+from core import comparison as _comparison
 from core import content as _content
 from core import export as _export
 from core import io as _io
@@ -798,6 +799,23 @@ def tool_merge(
     return {'docId': new_id}
 
 
+def tool_compare_documents(
+    doc_id: str,
+    compare_to_doc_id: str,
+    author: str = 'MCP',
+    date_time_iso: Optional[str] = None,
+    compare_list_definitions: bool = False,
+):
+    _comparison.compare_documents(
+        doc_id=doc_id,
+        compare_to_doc_id=compare_to_doc_id,
+        author=author,
+        date_time_iso=date_time_iso,
+        compare_list_definitions=compare_list_definitions,
+    )
+    return {}
+
+
 def tool_save_as_new(doc_id: str, name: str, fmt: str = 'docx'):
     new_id, new_name = _io.save_as_new(doc_id, name, fmt=fmt)
     _store_add_mapping(new_id, new_name)
@@ -892,6 +910,7 @@ def tool_sign_document(
     office_version: Optional[str] = None,
     vertical_resolution: Optional[int] = None,
     windows_version: Optional[str] = None,
+    timestamp_settings: Optional[dict] = None,
 ):
     _signatures.sign_document(
         doc_id,
@@ -903,6 +922,7 @@ def tool_sign_document(
         office_version=office_version,
         vertical_resolution=vertical_resolution,
         windows_version=windows_version,
+        timestamp_settings=timestamp_settings,
     )
     return {}
 
@@ -1522,6 +1542,22 @@ def register_tools() -> None:
             resolve_theme_colors=resolve_theme_colors,
         )
 
+    @mcp.tool(description='Compare two documents and save revisions in the source document')
+    def compare_documents(
+        doc_id: str,
+        compare_to_doc_id: str,
+        author: str = 'MCP',
+        date_time_iso: Optional[str] = None,
+        compare_list_definitions: bool = False,
+    ):
+        return tool_compare_documents(
+            doc_id=doc_id,
+            compare_to_doc_id=compare_to_doc_id,
+            author=author,
+            date_time_iso=date_time_iso,
+            compare_list_definitions=compare_list_definitions,
+        )
+
     @mcp.tool(description='Save a copy of the document with a new name and format')
     def save_as_new(doc_id: str, name: str, fmt: str = 'docx'):
         return tool_save_as_new(doc_id, name, fmt=fmt)
@@ -1603,6 +1639,7 @@ def register_tools() -> None:
         office_version: Optional[str] = None,
         vertical_resolution: Optional[int] = None,
         windows_version: Optional[str] = None,
+        timestamp_settings: Optional[dict] = None,
     ):
         return tool_sign_document(
             doc_id=doc_id,
@@ -1614,6 +1651,7 @@ def register_tools() -> None:
             office_version=office_version,
             vertical_resolution=vertical_resolution,
             windows_version=windows_version,
+            timestamp_settings=timestamp_settings,
         )
 
     @mcp.tool(description='Get document digital signature metadata')
