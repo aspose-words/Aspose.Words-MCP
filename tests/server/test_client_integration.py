@@ -602,6 +602,38 @@ def test_export_base64_advanced_pdf_text_shaping(mcp_client_config, result_file_
     _run_and_assert_file(result_file_path, run_client)
 
 
+def test_export_base64_advanced_xps_compression(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            await client.call_tool(
+                name='add_paragraph',
+                arguments={'doc_id': doc_id, 'text': 'XPS advanced export payload'},
+            )
+
+            exported = await client.call_tool(
+                name='export_base64_advanced',
+                arguments={
+                    'doc_id': doc_id,
+                    'fmt': 'xps',
+                    'options': {'compression_level': 'super_fast'},
+                },
+            )
+            assert hasattr(exported, 'data')
+            assert isinstance(exported.data, dict)
+            assert set(exported.data) >= {'base64', 'mime', 'ext'}
+            assert exported.data['ext'] == 'xps'
+            assert exported.data['mime'] == 'application/vnd.ms-xpsdocument'
+
+            decoded_xps_bytes = base64.b64decode(exported.data['base64'])
+            assert isinstance(decoded_xps_bytes, (bytes, bytearray))
+            assert len(decoded_xps_bytes) > 0
+
+            await asyncio.to_thread(Path(result_file_path).write_bytes, decoded_xps_bytes)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
 def test_merge_documents_with_and_without_new_page(mcp_client_config, result_file_path):
     async def run_client():
         async with _client_session(mcp_client_config) as client:

@@ -1,5 +1,5 @@
 fastmcp
-aspose-words==26.7.0
+aspose-words==26.8
 build
 pyright>=1.1.414
 pytest
