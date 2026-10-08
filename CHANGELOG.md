@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.9.0] - 2026-10-08
+### Added
+- Exposed document comparison through MCP with opt-in list-definition comparison control.
+- Exposed timestamped digital signing through optional `timestamp_settings` for document signatures.
+
+### Changed
+- Aligned server versioning with Aspose.Words 26.9.0.
+
 ## [26.8.0] - 2026-10-08
 ### Added
 - Exposed XPS export through the advanced export MCP surface with `compression_level` control.
