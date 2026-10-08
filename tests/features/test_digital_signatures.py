@@ -1,3 +1,4 @@
+import datetime
 import types
 from pathlib import Path
 
@@ -293,9 +294,264 @@ def test_sign_document_omitted_optional_sign_options_preserve_defaults(monkeypat
     ]
 
 
-def test_tool_sign_document_forwards_26_5_sign_options(monkeypatch):
+@pytest.mark.parametrize(
+    'timestamp_settings,expected_timestamp_args',
+    [
+        (
+            {
+                'server_url': '  https://tsa.example.test  ',
+                'user_name': None,
+                'password': None,
+            },
+            ('https://tsa.example.test', '', ''),
+        ),
+        (
+            {
+                'server_url': 'https://tsa.example.test',
+                'user_name': 'tsa-user',
+                'password': 'tsa-secret',
+                'timeout': '12.5',
+            },
+            (
+                'https://tsa.example.test',
+                'tsa-user',
+                'tsa-secret',
+                datetime.timedelta(seconds=12.5),
+            ),
+        ),
+    ],
+)
+def test_sign_document_builds_timestamp_settings_and_selects_xades_t(
+    monkeypatch, tmp_path, timestamp_settings, expected_timestamp_args
+):
+    source_path = tmp_path / 'source.docx'
+    source_path.write_text('unsigned document')
+    certificate_path = tmp_path / 'certificate.pfx'
+    certificate_path.write_text('certificate bytes')
+    cert_holder = object()
+    timestamp_instances = []
+    aspose_events: list[tuple[str, object]] = []
+
+    class FakeCertificateHolder:
+        @staticmethod
+        def create(file_name: str, passphrase: str):
+            aspose_events.append(('holder', (file_name, passphrase)))
+            return cert_holder
+
+    class FakeDigitalSignatureTimestampSettings:
+        def __init__(self, *args):
+            self.args = args
+            timestamp_instances.append(self)
+            aspose_events.append(('timestamp', args))
+
+    class FakeSignOptions:
+        def __setattr__(self, name: str, assigned_object: object) -> None:
+            aspose_events.append((f'assign:{name}', assigned_object))
+            object.__setattr__(self, name, assigned_object)
+
+    class FakeXmlDsigLevel:
+        X_AD_ES_T = 'xades-t-constant'
+
+    class FakeDigitalSignatureUtil:
+        @staticmethod
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
+            aspose_events.append(('sign', (src_file_name, dst_file_name, cert_holder)))
+            assert sign_options.timestamp_settings is timestamp_instances[0]
+            assert sign_options.xml_dsig_level == 'xades-t-constant'
+            Path(dst_file_name).write_text('signed document')
+
+    monkeypatch.setattr(_signatures, 'ensure_path', lambda doc_id: source_path)
+    monkeypatch.setattr(
+        _signatures.aw,
+        'digitalsignatures',
+        types.SimpleNamespace(
+            CertificateHolder=FakeCertificateHolder,
+            DigitalSignatureTimestampSettings=FakeDigitalSignatureTimestampSettings,
+            DigitalSignatureUtil=FakeDigitalSignatureUtil,
+            SignOptions=FakeSignOptions,
+            XmlDsigLevel=FakeXmlDsigLevel,
+        ),
+    )
+
+    sign_succeeded = _signatures.sign_document(
+        'doc-id',
+        str(certificate_path),
+        'test-passphrase',
+        timestamp_settings=timestamp_settings,
+    )
+
+    signed_path = source_path.with_name(f'{source_path.stem}.signed{source_path.suffix}')
+    assert sign_succeeded is True
+    assert source_path.read_text() == 'signed document'
+    assert not signed_path.exists()
+    assert timestamp_instances[0].args == expected_timestamp_args
+    assert aspose_events == [
+        ('timestamp', expected_timestamp_args),
+        ('holder', (str(certificate_path), 'test-passphrase')),
+        ('assign:timestamp_settings', timestamp_instances[0]),
+        ('assign:xml_dsig_level', 'xades-t-constant'),
+        ('sign', (str(source_path), str(signed_path), cert_holder)),
+    ]
+
+
+@pytest.mark.parametrize(
+    'timestamp_settings,expected_message',
+    [
+        ('not-an-object', 'timestamp_settings must be an object'),
+        ([], 'timestamp_settings must be an object'),
+        ({}, 'timestamp_settings.server_url must be non-empty'),
+        ({'server_url': '   '}, 'timestamp_settings.server_url must be non-empty'),
+        (
+            {'server_url': 'https://tsa.example.test', 'timeout': 0},
+            'timestamp_settings.timeout must be a positive number',
+        ),
+        (
+            {'server_url': 'https://tsa.example.test', 'timeout': True},
+            'timestamp_settings.timeout must be a positive number',
+        ),
+        (
+            {'server_url': 'https://tsa.example.test', 'timeout': 'nan'},
+            'timestamp_settings.timeout must be a positive number',
+        ),
+    ],
+)
+def test_sign_document_validates_timestamp_settings_before_aspose_calls(
+    monkeypatch, tmp_path, timestamp_settings, expected_message
+):
+    source_path = tmp_path / 'source.docx'
+    source_path.write_text('unsigned document')
+    certificate_path = tmp_path / 'certificate.pfx'
+    certificate_path.write_text('certificate bytes')
+    aspose_events: list[str] = []
+
+    class FakeCertificateHolder:
+        @staticmethod
+        def create(file_name: str, passphrase: str):
+            aspose_events.append(f'holder:{file_name}:{passphrase}')
+            raise AssertionError('certificate holder must not be created for invalid settings')
+
+    class FakeDigitalSignatureTimestampSettings:
+        def __init__(self, *args):
+            aspose_events.append(f'timestamp:{args}')
+            raise AssertionError('timestamp settings must not be created for invalid settings')
+
+    class FakeDigitalSignatureUtil:
+        @staticmethod
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
+            aspose_events.append(f'sign:{src_file_name}:{dst_file_name}')
+            raise AssertionError('digital signature must not be attempted for invalid settings')
+
+    monkeypatch.setattr(_signatures, 'ensure_path', lambda doc_id: source_path)
+    monkeypatch.setattr(
+        _signatures.aw,
+        'digitalsignatures',
+        types.SimpleNamespace(
+            CertificateHolder=FakeCertificateHolder,
+            DigitalSignatureTimestampSettings=FakeDigitalSignatureTimestampSettings,
+            DigitalSignatureUtil=FakeDigitalSignatureUtil,
+            SignOptions=object,
+        ),
+    )
+
+    with pytest.raises(ValueError, match=expected_message):
+        _signatures.sign_document(
+            'doc-id',
+            str(certificate_path),
+            timestamp_settings=timestamp_settings,
+        )
+
+    assert aspose_events == []
+
+
+@pytest.mark.parametrize(
+    'failing_api,expected_message',
+    [
+        ('holder', 'holder failure'),
+        ('timestamp', 'timestamp failure'),
+        ('assign_timestamp', 'assign timestamp failure'),
+        ('assign_level', 'assign level failure'),
+        ('sign', 'sign failure'),
+    ],
+)
+def test_sign_document_timestamp_aspose_failures_propagate(
+    monkeypatch, tmp_path, failing_api, expected_message
+):
+    source_path = tmp_path / 'source.docx'
+    source_path.write_text('unsigned document')
+    certificate_path = tmp_path / 'certificate.pfx'
+    certificate_path.write_text('certificate bytes')
+
+    class FakeCertificateHolder:
+        @staticmethod
+        def create(file_name: str, passphrase: str):
+            if failing_api == 'holder':
+                raise RuntimeError('holder failure')
+            return object()
+
+    class FakeDigitalSignatureTimestampSettings:
+        def __init__(self, *args):
+            if failing_api == 'timestamp':
+                raise RuntimeError('timestamp failure')
+
+    class FakeSignOptions:
+        def __setattr__(self, name: str, assigned_object: object) -> None:
+            if name == 'timestamp_settings' and failing_api == 'assign_timestamp':
+                raise RuntimeError('assign timestamp failure')
+            if name == 'xml_dsig_level' and failing_api == 'assign_level':
+                raise RuntimeError('assign level failure')
+            object.__setattr__(self, name, assigned_object)
+
+    class FakeXmlDsigLevel:
+        X_AD_ES_T = 'xades-t-constant'
+
+    class FakeDigitalSignatureUtil:
+        @staticmethod
+        def sign(src_file_name: str, dst_file_name: str, cert_holder, sign_options) -> None:
+            if failing_api == 'sign':
+                raise RuntimeError('sign failure')
+
+    monkeypatch.setattr(_signatures, 'ensure_path', lambda doc_id: source_path)
+    monkeypatch.setattr(
+        _signatures.aw,
+        'digitalsignatures',
+        types.SimpleNamespace(
+            CertificateHolder=FakeCertificateHolder,
+            DigitalSignatureTimestampSettings=FakeDigitalSignatureTimestampSettings,
+            DigitalSignatureUtil=FakeDigitalSignatureUtil,
+            SignOptions=FakeSignOptions,
+            XmlDsigLevel=FakeXmlDsigLevel,
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match=expected_message):
+        _signatures.sign_document(
+            'doc-id',
+            str(certificate_path),
+            timestamp_settings={'server_url': 'https://tsa.example.test'},
+        )
+
+
+def test_sign_document_uses_explicit_timestamp_api_references():
+    signature_source = Path('core/signatures.py').read_text(encoding='utf-8')
+    assert 'aw.digitalsignatures.CertificateHolder.create' in signature_source
+    assert 'aw.digitalsignatures.SignOptions()' in signature_source
+    assert 'sign_options.timestamp_settings =' in signature_source
+    assert 'sign_options.xml_dsig_level =' in signature_source
+    assert 'aw.digitalsignatures.XmlDsigLevel.X_AD_ES_T' in signature_source
+    assert 'aw.digitalsignatures.DigitalSignatureTimestampSettings(' in signature_source
+    assert 'getattr(' not in signature_source
+    assert 'hasattr(' not in signature_source
+
+
+def test_tool_sign_document_forwards_26_5_sign_options_and_timestamp_settings(monkeypatch):
     signature_calls = []
     certificate_path = str(Path('certificates') / 'signing.pfx')
+    timestamp_settings = {
+        'server_url': 'https://tsa.example.test',
+        'user_name': 'tsa-user',
+        'password': 'tsa-secret',
+        'timeout': 30,
+    }
 
     def fake_sign_document(
         doc_id: str,
@@ -307,6 +563,7 @@ def test_tool_sign_document_forwards_26_5_sign_options(monkeypatch):
         office_version: str | None = None,
         vertical_resolution: int | None = None,
         windows_version: str | None = None,
+        timestamp_settings: dict | None = None,
     ) -> bool:
         signature_calls.append(
             {
@@ -319,6 +576,7 @@ def test_tool_sign_document_forwards_26_5_sign_options(monkeypatch):
                 'office_version': office_version,
                 'vertical_resolution': vertical_resolution,
                 'windows_version': windows_version,
+                'timestamp_settings': timestamp_settings,
             }
         )
         return True
@@ -335,6 +593,7 @@ def test_tool_sign_document_forwards_26_5_sign_options(monkeypatch):
         office_version='Office 2024',
         vertical_resolution=600,
         windows_version='Windows 11',
+        timestamp_settings=timestamp_settings,
     )
 
     assert signing_response == {}
@@ -349,8 +608,12 @@ def test_tool_sign_document_forwards_26_5_sign_options(monkeypatch):
             'office_version': 'Office 2024',
             'vertical_resolution': 600,
             'windows_version': 'Windows 11',
+            'timestamp_settings': timestamp_settings,
         }
     ]
+
+    tool_source = Path('mcp_server.py').read_text(encoding='utf-8')
+    assert 'xml_dsig_level' not in tool_source
 
 
 def test_tool_get_digital_signatures_wraps_signatures_and_forwards_doc_id(
@@ -384,10 +647,16 @@ def test_tool_get_digital_signatures_wraps_signatures_and_forwards_doc_id(
     assert signature_calls == ['doc-id']
 
 
-def test_registered_sign_document_forwards_26_5_sign_options(monkeypatch):
+def test_registered_sign_document_forwards_26_5_sign_options_and_timestamp_settings(monkeypatch):
     captured_tool_functions = {}
     tool_sign_calls = []
     certificate_path = str(Path('certificates') / 'signing.pfx')
+    timestamp_settings = {
+        'server_url': 'https://tsa.example.test',
+        'user_name': 'tsa-user',
+        'password': 'tsa-secret',
+        'timeout': 30,
+    }
 
     class FakeMcp:
         def tool(self, description=None):
@@ -407,6 +676,7 @@ def test_registered_sign_document_forwards_26_5_sign_options(monkeypatch):
         office_version: str | None = None,
         vertical_resolution: int | None = None,
         windows_version: str | None = None,
+        timestamp_settings: dict | None = None,
     ):
         tool_sign_calls.append(
             {
@@ -419,6 +689,7 @@ def test_registered_sign_document_forwards_26_5_sign_options(monkeypatch):
                 'office_version': office_version,
                 'vertical_resolution': vertical_resolution,
                 'windows_version': windows_version,
+                'timestamp_settings': timestamp_settings,
             }
         )
         return {'signed': True}
@@ -438,6 +709,7 @@ def test_registered_sign_document_forwards_26_5_sign_options(monkeypatch):
         office_version='Office 2024',
         vertical_resolution=600,
         windows_version='Windows 11',
+        timestamp_settings=timestamp_settings,
     )
 
     assert registered_response == {'signed': True}
@@ -452,6 +724,7 @@ def test_registered_sign_document_forwards_26_5_sign_options(monkeypatch):
             'office_version': 'Office 2024',
             'vertical_resolution': 600,
             'windows_version': 'Windows 11',
+            'timestamp_settings': timestamp_settings,
         }
     ]
 

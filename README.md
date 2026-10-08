@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
-**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.8.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
+**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.9.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
 
 ## Features
 
@@ -17,8 +17,9 @@
 - Footnotes and endnotes: add, convert, anchor-based operations, validation
 - Comments: get by author, by paragraph, all comments
 - Document properties: read/write (title, author, subject, keywords)
+- Document comparison with revision output
 - Protection: protect/unprotect, partial editing restrictions
-- Digital signatures: sign documents and inspect signature metadata
+- Digital signatures: sign documents with optional timestamp settings and inspect signature metadata
 - Bookmarks, hyperlinks
 - Watermarks (text/image)
 - Export as Base64 (DOCX, signed PDF, XPS, etc.)
@@ -127,6 +128,7 @@ Main tool categories:
 - watermarks: watermarks
 - links/bookmarks: hyperlinks and bookmarks
 - properties: document properties
+- comparison: compare documents and save revisions
 - protection: protection and restrictions
 - signatures: signing and signature metadata
 - comments/notes: comments, footnotes/endnotes
