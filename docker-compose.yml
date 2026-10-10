@@ -1,0 +1,20 @@
+services:
+  aspose-words-mcp:
+    build: .
+    container_name: aspose-words-mcp
+    ports:
+      - "${HOST_PORT:-9110}:9110"
+    environment:
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=9110
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DOCS_DATA_DIR=/app/data
+      - ASPOSE_WORDS_LICENSE_PATH=${ASPOSE_WORDS_LICENSE_PATH:-}
+    volumes:
+      - aspose-words-data:/app/data
+      - ${ASPOSE_WORDS_LICENSE_VOLUME:-./license}:/app/license:ro
+    restart: unless-stopped
+
+volumes:
+  aspose-words-data:
