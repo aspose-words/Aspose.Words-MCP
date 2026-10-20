@@ -3,10 +3,14 @@ import base64
 import json
 import os
 from contextlib import asynccontextmanager
+from io import BytesIO
 from pathlib import Path
 
 import aspose.words as aw
+import pytest
+from aspose.pydrawing import Color
 from fastmcp import Client
+from fastmcp.exceptions import ToolError
 
 
 @asynccontextmanager
@@ -122,6 +126,313 @@ def test_client_creates_document(mcp_client_config, result_file_path):
             await _save_exported_to_file(result_file_path, client, doc_id)
 
     _run_and_assert_file(result_file_path, run_client)
+
+
+def test_chart_create_format_export_and_render(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            tools = {tool.name: tool for tool in await client.list_tools()}
+            creation = tools['add_chart_end'].input_schema
+            assert set(creation['required']) == {'doc_id', 'chart_type', 'categories', 'series'}
+            properties = creation['properties']
+            assert properties['categories']['items']['type'] == 'string'
+            assert properties['series']['items']['type'] == 'object'
+            assert 'name' in properties['series']['description']
+            assert 'values' in properties['series']['description']
+            assert properties['width_points']['default'] == 432
+            assert properties['height_points']['default'] == 252
+            assert tools['list_charts'].input_schema['required'] == ['doc_id']
+            formatting = tools['format_chart_plot_area'].input_schema
+            assert set(formatting['required']) == {'doc_id', 'chart_index'}
+            for field in ('fill_color', 'gradient', 'line_color', 'line_width_points'):
+                assert formatting['properties'][field]['default'] is None
+            assert 'from_center' in formatting['properties']['gradient']['description']
+
+            doc_id = await _create_document_and_get_id(client, {'name': 'chart-client.docx'})
+            listed = await client.call_tool('list_charts', {'doc_id': doc_id})
+            assert listed.data == {'charts': []}
+            added = await client.call_tool(
+                'add_chart_end',
+                {
+                    'doc_id': doc_id,
+                    'chart_type': ' COLUMN ',
+                    'categories': ['A', 'B', 'C'],
+                    'series': [{'name': 'Revenue', 'values': [12, -3, 0]}],
+                    'width_points': 320,
+                    'height_points': 200,
+                },
+            )
+            assert added.data == {'chartIndex': 0}
+            listed = await client.call_tool('list_charts', {'doc_id': doc_id})
+            assert listed.data == {
+                'charts': [
+                    {
+                        'chartIndex': 0,
+                        'series': [{'seriesIndex': 0, 'name': 'Revenue', 'pointCount': 3}],
+                    }
+                ]
+            }
+            solid = await client.call_tool(
+                'format_chart_plot_area',
+                {'doc_id': doc_id, 'chart_index': 0, 'fill_color': '#ABCDEF'},
+            )
+            assert solid.data == {}
+            formatted = await client.call_tool(
+                'format_chart_plot_area',
+                {
+                    'doc_id': doc_id,
+                    'chart_index': 0,
+                    'gradient': {
+                        'color': '336699',
+                        'style': 'Diagonal-Up',
+                        'variant': ' VARIANT_2 ',
+                        'degree': 0.25,
+                    },
+                    'line_color': '#112233',
+                    'line_width_points': 1.5,
+                },
+            )
+            assert formatted.data == {}
+            path = _runtime_docx_path(doc_id)
+            before = await asyncio.to_thread(path.read_bytes)
+            invalid_calls = [
+                ('list_charts', {'doc_id': 'missing-chart-document'}, 'not found'),
+                (
+                    'add_chart_end',
+                    {
+                        'doc_id': doc_id,
+                        'chart_type': 'pie',
+                        'categories': ['A'],
+                        'series': [{'name': 'X', 'values': [1]}],
+                    },
+                    'chart_type must be column or waterfall',
+                ),
+                (
+                    'add_chart_end',
+                    {
+                        'doc_id': doc_id,
+                        'chart_type': 'column',
+                        'categories': ['A'],
+                        'series': [{'name': 'X', 'values': [1, 2]}],
+                    },
+                    'values must match categories length',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {'doc_id': doc_id, 'chart_index': -1, 'fill_color': '112233'},
+                    'chart_index out of range',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {'doc_id': doc_id, 'chart_index': True, 'fill_color': '112233'},
+                    'integer',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {'doc_id': doc_id, 'chart_index': 0, 'line_width_points': True},
+                    'number',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {'doc_id': doc_id, 'chart_index': 0, 'fill_color': ''},
+                    'fill_color must be a six-digit RGB',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {
+                        'doc_id': doc_id,
+                        'chart_index': 0,
+                        'gradient': {'color': '112233', 'degree': 2},
+                    },
+                    'degree must be between 0 and 1',
+                ),
+            ]
+            for tool_name, arguments, message in invalid_calls:
+                with pytest.raises(ToolError, match=message):
+                    await client.call_tool(tool_name, arguments)
+                assert await asyncio.to_thread(path.read_bytes) == before
+
+            exported = await client.call_tool('export_base64', {'doc_id': doc_id, 'fmt': 'docx'})
+            raw = base64.b64decode(exported.data['base64'])
+            document = aw.Document(BytesIO(raw))
+            shape = document.get_child_nodes(aw.NodeType.SHAPE, True)[0].as_shape()
+            assert (shape.width, shape.height) == (320, 200)
+            chart = shape.chart
+            assert chart.series.count == 1
+            assert chart.series[0].name == 'Revenue'
+            assert [chart.series[0].x_values[i].string_value for i in range(3)] == ['A', 'B', 'C']
+            assert [chart.series[0].y_values[i].double_value for i in range(3)] == [12, -3, 0]
+            fmt = chart.plot_area.format
+            assert fmt.fill.fill_type == aw.drawing.FillType.GRADIENT
+            assert fmt.fill.gradient_style == aw.drawing.GradientStyle.DIAGONAL_UP
+            assert fmt.fill.gradient_variant == aw.drawing.GradientVariant.VARIANT2
+            assert fmt.stroke.fore_color.to_argb() == Color.from_argb(255, 17, 34, 51).to_argb()
+            assert fmt.stroke.weight == 1.5
+            assert fmt.stroke.visible is True
+            rendered = await client.call_tool(
+                'render_page_base64',
+                {'doc_id': doc_id, 'page_index': 0, 'fmt': 'png', 'dpi': 72},
+            )
+            assert base64.b64decode(rendered.data['base64']).startswith(b'\x89PNG\r\n\x1a\n')
+            await asyncio.to_thread(Path(result_file_path).write_bytes, raw)
+
+    _run_and_assert_file(result_file_path, run_client)
+
+
+def test_waterfall_create_inspect_export_and_reopen(mcp_client_config, result_file_path):
+    flags = [True, False, False, True, False, False, True]
+    categories = ['Opening', 'Sales', 'Costs', 'Intermediate', 'Income', 'Expense', 'Final']
+    values = [100, 20, -10, 110, 15, -5, 120]
+    series = [{'name': 'Balance', 'values': values, 'is_subtotal': flags}]
+    points = [
+        {
+            'pointIndex': i,
+            'dataPointIndex': i,
+            'isTotal': flag,
+            'dataPointIsTotal': flag,
+        }
+        for i, flag in enumerate(flags)
+    ]
+
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            tools = {tool.name: tool for tool in await client.list_tools()}
+            creation = tools['add_chart_end'].input_schema['properties']
+            assert 'waterfall' in creation['chart_type']['description']
+            assert 'is_subtotal' in creation['series']['description']
+            schema = tools['get_waterfall_totals'].input_schema
+            assert set(schema['required']) == {'doc_id', 'chart_index'}
+            props = schema['properties']
+            assert props['doc_id']['type'] == 'string'
+            assert props['chart_index']['type'] == 'integer'
+            assert props['series_index']['type'] == 'integer'
+            assert props['series_index']['default'] == 0
+            assert props['point_index']['default'] is None
+            assert {choice['type'] for choice in props['point_index']['anyOf']} == {
+                'integer',
+                'null',
+            }
+            doc_id = await _create_document_and_get_id(client, {'name': 'waterfall-client.docx'})
+            added = await client.call_tool(
+                'add_chart_end',
+                {
+                    'doc_id': doc_id,
+                    'chart_type': ' WATERFALL ',
+                    'categories': categories,
+                    'series': series,
+                },
+            )
+            assert added.data == {'chartIndex': 0}
+            listed = await client.call_tool('list_charts', {'doc_id': doc_id})
+            assert listed.data == {
+                'charts': [
+                    {
+                        'chartIndex': 0,
+                        'series': [{'seriesIndex': 0, 'name': 'Balance', 'pointCount': len(flags)}],
+                    }
+                ]
+            }
+            path = _runtime_docx_path(doc_id)
+            before = await asyncio.to_thread(path.read_bytes)
+            expected = {'chartIndex': 0, 'seriesIndex': 0, 'points': points}
+            inspected = await client.call_tool(
+                'get_waterfall_totals', {'doc_id': doc_id, 'chart_index': 0}
+            )
+            assert inspected.data == expected
+            explicit_defaults = await client.call_tool(
+                'get_waterfall_totals',
+                {'doc_id': doc_id, 'chart_index': 0, 'series_index': 0, 'point_index': None},
+            )
+            assert explicit_defaults.data == expected
+            for index, point in enumerate(points):
+                inspected = await client.call_tool(
+                    'get_waterfall_totals',
+                    {'doc_id': doc_id, 'chart_index': 0, 'series_index': 0, 'point_index': index},
+                )
+                assert inspected.data == {**expected, 'points': [point]}
+            assert await asyncio.to_thread(path.read_bytes) == before
+
+            for field in ('chart_index', 'series_index', 'point_index'):
+                for value, message in (
+                    (-1, f'{field} out of range'),
+                    (100, f'{field} out of range'),
+                    (True, 'integer'),
+                    ('', 'integer'),
+                    ('0', 'integer'),
+                ):
+                    with pytest.raises(ToolError, match=message):
+                        await client.call_tool(
+                            'get_waterfall_totals',
+                            {'doc_id': doc_id, 'chart_index': 0, field: value},
+                        )
+            with pytest.raises(ToolError, match='Document missing-waterfall not found'):
+                await client.call_tool(
+                    'get_waterfall_totals', {'doc_id': 'missing-waterfall', 'chart_index': 0}
+                )
+            invalid_series = [
+                ({'name': 'X', 'values': values}, 'must contain only name, values and is_subtotal'),
+                ({**series[0], 'is_subtotal': []}, 'is_subtotal must match categories length'),
+                ({**series[0], 'is_subtotal': ''}, 'is_subtotal must match categories length'),
+                ({**series[0], 'is_subtotal': [1] * 7}, 'is_subtotal must contain only booleans'),
+                (
+                    {**series[0], 'is_subtotal': ['false'] * 7},
+                    'is_subtotal must contain only booleans',
+                ),
+            ]
+            for item, message in invalid_series:
+                with pytest.raises(ToolError, match=message):
+                    await client.call_tool(
+                        'add_chart_end',
+                        {
+                            'doc_id': doc_id,
+                            'chart_type': 'waterfall',
+                            'categories': categories,
+                            'series': [item],
+                        },
+                    )
+            with pytest.raises(
+                ToolError, match='is_subtotal is only supported for waterfall charts'
+            ):
+                await client.call_tool(
+                    'add_chart_end',
+                    {
+                        'doc_id': doc_id,
+                        'chart_type': 'column',
+                        'categories': categories,
+                        'series': series,
+                    },
+                )
+            assert await asyncio.to_thread(path.read_bytes) == before
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+            await client.call_tool(
+                'add_chart_end',
+                {
+                    'doc_id': doc_id,
+                    'chart_type': 'column',
+                    'categories': ['X'],
+                    'series': [{'name': 'Column', 'values': [1]}],
+                },
+            )
+            before = await asyncio.to_thread(path.read_bytes)
+            with pytest.raises(ToolError, match='only supported for waterfall series'):
+                await client.call_tool('get_waterfall_totals', {'doc_id': doc_id, 'chart_index': 1})
+            assert await asyncio.to_thread(path.read_bytes) == before
+
+    _run_and_assert_file(result_file_path, run_client)
+    document = aw.Document(str(result_file_path))
+    shape = document.get_child_nodes(aw.NodeType.SHAPE, True)[0].as_shape()
+    chart = shape.chart
+    assert chart.series.count == 1
+    assert (shape.width, shape.height) == (432, 252)
+    reopened = chart.series[0]
+    assert reopened.series_type == aw.drawing.charts.ChartSeriesType.WATERFALL
+    assert reopened.y_values.count == len(flags)
+    assert [reopened.x_values[i].string_value for i in range(len(flags))] == categories
+    assert [reopened.y_values[i].double_value for i in range(len(flags))] == values
+    assert [reopened.is_total(i) for i in range(len(flags))] == flags
+    assert [reopened.data_points[i].is_total for i in range(len(flags))] == flags
+    assert [reopened.data_points[i].index for i in range(len(flags))] == list(range(len(flags)))
 
 
 def test_insert_text_start_end(mcp_client_config, result_file_path):
