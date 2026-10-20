@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog", and versioning adheres to Semantic Versioning (SemVer).
 
+## [26.10.0] - 2026-10-20
+### Added
+- Exposed column and waterfall chart creation and chart/series discovery through MCP.
+- Exposed chart plot-area fill and line formatting and read-only waterfall total inspection.
+
+### Changed
+- Aligned server versioning and dependencies with Aspose.Words 26.10.0.
+
 ## [26.9.0] - 2026-10-08
 ### Added
 - Exposed document comparison through MCP with opt-in list-definition comparison control.

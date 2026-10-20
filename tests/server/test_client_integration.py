@@ -743,3 +743,220 @@ def test_merge_documents_with_and_without_new_page(mcp_client_config, result_fil
             )
 
     _run_and_assert_file(result_file_path, run_client)
+
+
+def test_chart_tools_discovery_and_workflows(mcp_client_config, result_file_path):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            tools = {tool.name: tool for tool in await client.list_tools()}
+            expected = {
+                'insert_chart': (
+                    'Insert a column or waterfall chart at the end of the document',
+                    {'doc_id', 'chart_type', 'categories', 'series'},
+                ),
+                'list_charts': ('List charts and their series in document order', {'doc_id'}),
+                'format_chart_plot_area': (
+                    'Set fill and line formatting for a chart plot area',
+                    {'doc_id', 'chart_index'},
+                ),
+                'get_waterfall_totals': (
+                    'Inspect total data points in a waterfall chart series',
+                    {'doc_id', 'chart_index'},
+                ),
+            }
+            for name, (description, required) in expected.items():
+                assert tools[name].description == description
+                assert set(tools[name].input_schema['required']) == required
+            creation = tools['insert_chart'].input_schema['properties']
+            assert set(creation) == {
+                'doc_id',
+                'chart_type',
+                'categories',
+                'series',
+                'width',
+                'height',
+            }
+            assert creation['categories']['items']['type'] == 'string'
+            assert creation['series']['items']['type'] == 'object'
+            assert creation['width']['default'] == 432
+            assert creation['height']['default'] == 252
+            formatting = tools['format_chart_plot_area'].input_schema['properties']
+            assert set(formatting) == {
+                'doc_id',
+                'chart_index',
+                'fill_color',
+                'line_color',
+                'line_width',
+            }
+            for name in ['fill_color', 'line_color', 'line_width']:
+                assert formatting[name]['default'] is None
+            totals_schema = tools['get_waterfall_totals'].input_schema['properties']
+            assert set(totals_schema) == {'doc_id', 'chart_index', 'series_index'}
+            assert totals_schema['series_index']['default'] == 0
+
+            doc_id = await _create_document_and_get_id(client)
+            empty = await client.call_tool('list_charts', {'doc_id': doc_id})
+            assert empty.data == {'charts': []}
+            flags = [True, False, True, False, True]
+            for index, kind in enumerate(['column', ' WaTeRfAlL ']):
+                series = {'name': 'Revenue', 'values': [10, 5, 15, -2, 13]}
+                if index == 1:
+                    series['is_subtotal'] = flags
+                result = await client.call_tool(
+                    'insert_chart',
+                    {
+                        'doc_id': doc_id,
+                        'chart_type': kind,
+                        'categories': ['Start', 'Up', 'Middle', 'Down', 'End'],
+                        'series': [series],
+                    },
+                )
+                assert result.data == {'chartIndex': index}
+                formatted = await client.call_tool(
+                    'format_chart_plot_area',
+                    {
+                        'doc_id': doc_id,
+                        'chart_index': index,
+                        'fill_color': ' #aAbBcC ',
+                        'line_color': '123456',
+                        'line_width': 2.5,
+                    },
+                )
+                assert formatted.data == {}
+            listed = await client.call_tool('list_charts', {'doc_id': doc_id})
+            assert listed.data == {
+                'charts': [
+                    {
+                        'chartIndex': 0,
+                        'seriesCount': 1,
+                        'series': [{'seriesIndex': 0, 'name': 'Revenue', 'seriesType': 'column'}],
+                    },
+                    {
+                        'chartIndex': 1,
+                        'seriesCount': 1,
+                        'series': [
+                            {'seriesIndex': 0, 'name': 'Revenue', 'seriesType': 'waterfall'}
+                        ],
+                    },
+                ]
+            }
+            totals = await client.call_tool(
+                'get_waterfall_totals',
+                {
+                    'doc_id': doc_id,
+                    'chart_index': 1,
+                },
+            )
+            assert totals.data == {
+                'chartIndex': 1,
+                'seriesIndex': 0,
+                'totalIndices': [0, 2, 4],
+                'points': [{'index': i, 'isTotal': flag} for i, flag in enumerate(flags)],
+            }
+            image = await client.call_tool(
+                'render_page_base64',
+                {
+                    'doc_id': doc_id,
+                    'page_index': 0,
+                    'dpi': 72,
+                },
+            )
+            assert base64.b64decode(image.data['base64']).startswith(b'\x89PNG')
+            await _save_exported_to_file(result_file_path, client, doc_id)
+
+    _run_and_assert_file(result_file_path, run_client)
+    document = aw.Document(result_file_path)
+    shapes = document.get_child_nodes(aw.NodeType.SHAPE, True)
+    assert shapes.count == 2
+    for shape in shapes:
+        chart = shape.as_shape().chart
+        assert chart.series.count == 1
+        assert chart.plot_area.format.fill.fore_color.to_argb() & 0xFFFFFFFF == 0xFFAABBCC
+        assert chart.plot_area.format.stroke.weight == 2.5
+    assert shapes[1].as_shape().chart.series[0].is_total(4)
+
+
+def test_chart_tools_client_validation_errors_preserve_document(mcp_client_config):
+    async def run_client():
+        async with _client_session(mcp_client_config) as client:
+            doc_id = await _create_document_and_get_id(client)
+            valid = {
+                'doc_id': doc_id,
+                'chart_type': 'column',
+                'categories': ['A'],
+                'series': [{'name': 'N', 'values': [1]}],
+            }
+            await client.call_tool('insert_chart', valid)
+            path = _runtime_docx_path(doc_id)
+            before = path.read_bytes()
+            failures = [
+                (
+                    'insert_chart',
+                    {**valid, 'chart_type': ' '},
+                    'chart_type must be column or waterfall',
+                ),
+                ('insert_chart', {**valid, 'categories': [' ']}, 'nonblank strings'),
+                ('insert_chart', {**valid, 'width': 0}, 'width must be a positive finite number'),
+                ('insert_chart', {**valid, 'series': []}, 'series must be a nonempty list'),
+                (
+                    'insert_chart',
+                    {**valid, 'series': [{'name': 'N', 'values': [1, 2]}]},
+                    'values must be a list matching categories length',
+                ),
+                (
+                    'insert_chart',
+                    {**valid, 'series': [{'name': 'N', 'values': [1], 'is_subtotal': [True]}]},
+                    'is_subtotal is supported only for waterfall charts',
+                ),
+                (
+                    'insert_chart',
+                    {
+                        **valid,
+                        'chart_type': 'waterfall',
+                        'series': [{'name': 'N', 'values': [1], 'is_subtotal': ['true']}],
+                    },
+                    'is_subtotal must be a boolean list',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {'doc_id': doc_id, 'chart_index': 0},
+                    'provide at least one',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {'doc_id': doc_id, 'chart_index': 0, 'fill_color': ''},
+                    'fill_color must be a six-digit hexadecimal color',
+                ),
+                (
+                    'format_chart_plot_area',
+                    {'doc_id': doc_id, 'chart_index': -1, 'line_width': 1},
+                    'chart_index out of range',
+                ),
+                (
+                    'get_waterfall_totals',
+                    {'doc_id': doc_id, 'chart_index': 0},
+                    'requires a waterfall series',
+                ),
+                (
+                    'get_waterfall_totals',
+                    {'doc_id': doc_id, 'chart_index': 10},
+                    'chart_index out of range',
+                ),
+                (
+                    'get_waterfall_totals',
+                    {'doc_id': doc_id, 'chart_index': 0, 'series_index': -1},
+                    'series_index out of range',
+                ),
+                (
+                    'list_charts',
+                    {'doc_id': 'missing-chart-document'},
+                    'Document missing-chart-document not found',
+                ),
+            ]
+            for name, arguments, message in failures:
+                result = await client.call_tool(name, arguments, raise_on_error=False)
+                assert result.is_error
+                assert message in result.content[0].text
+                assert path.read_bytes() == before
+
+    asyncio.run(run_client())

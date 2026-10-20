@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastmcp import FastMCP
 
+from core import charts as _charts
 from core import comments as _comments
 from core import comparison as _comparison
 from core import content as _content
@@ -60,6 +61,37 @@ def tool_create_document(name: Optional[str] = None):
     doc_id, fname = _io.create_document(name)
     _store_add_mapping(doc_id, fname)
     return {'docId': doc_id, 'name': fname}
+
+
+def tool_insert_chart(
+    doc_id: str,
+    chart_type: str,
+    categories: list[str],
+    series: list[dict],
+    width: float = 432,
+    height: float = 252,
+):
+    index = _charts.insert_chart(doc_id, chart_type, categories, series, width, height)
+    return {'chartIndex': index}
+
+
+def tool_list_charts(doc_id: str):
+    return {'charts': _charts.list_charts(doc_id)}
+
+
+def tool_format_chart_plot_area(
+    doc_id: str,
+    chart_index: int,
+    fill_color: Optional[str] = None,
+    line_color: Optional[str] = None,
+    line_width: Optional[float] = None,
+):
+    _charts.format_chart_plot_area(doc_id, chart_index, fill_color, line_color, line_width)
+    return {}
+
+
+def tool_get_waterfall_totals(doc_id: str, chart_index: int, series_index: int = 0):
+    return _charts.get_waterfall_totals(doc_id, chart_index, series_index)
 
 
 def tool_insert_text_end(doc_id: str, text: str):
@@ -1100,6 +1132,35 @@ def register_tools() -> None:
     @mcp.tool(description='Create a new document and return its ID')
     def create_document(name: Optional[str] = None):
         return tool_create_document(name)
+
+    @mcp.tool(description='Insert a column or waterfall chart at the end of the document')
+    def insert_chart(
+        doc_id: str,
+        chart_type: str,
+        categories: list[str],
+        series: list[dict],
+        width: float = 432,
+        height: float = 252,
+    ):
+        return tool_insert_chart(doc_id, chart_type, categories, series, width, height)
+
+    @mcp.tool(description='List charts and their series in document order')
+    def list_charts(doc_id: str):
+        return tool_list_charts(doc_id)
+
+    @mcp.tool(description='Set fill and line formatting for a chart plot area')
+    def format_chart_plot_area(
+        doc_id: str,
+        chart_index: int,
+        fill_color: Optional[str] = None,
+        line_color: Optional[str] = None,
+        line_width: Optional[float] = None,
+    ):
+        return tool_format_chart_plot_area(doc_id, chart_index, fill_color, line_color, line_width)
+
+    @mcp.tool(description='Inspect total data points in a waterfall chart series')
+    def get_waterfall_totals(doc_id: str, chart_index: int, series_index: int = 0):
+        return tool_get_waterfall_totals(doc_id, chart_index, series_index)
 
     @mcp.tool(description='Insert text at the end of the document')
     def insert_text_end(doc_id: str, text: str):
