@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
-**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.9.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
+**Aspose.Words MCP** is a FastMCP-based MCP server built on top of [Aspose.Words for Python via .NET](https://products.aspose.com/words/python-net/). It automates Microsoft Word document creation and editing and exposes operations as MCP tools that any MCP-compatible client can call. The server is aligned with Aspose.Words for Python via .NET `26.10.0`. Supported transports: `stdio`, `streamable-http`, `sse`.
 
 ## Features
 
@@ -14,6 +14,7 @@
 - Page and section breaks; page setup (margins, orientation, paper size, columns)
 - Lists (bulleted/numbered)
 - Tables: create, auto-fit, merge cells, alignment, shading, paddings, column widths, header styling
+- Charts: create column and waterfall charts, list charts, format plot-area fills and lines, inspect waterfall totals
 - Footnotes and endnotes: add, convert, anchor-based operations, validation
 - Comments: get by author, by paragraph, all comments
 - Document properties: read/write (title, author, subject, keywords)
@@ -125,6 +126,7 @@ Main tool categories:
 - content/reading: create document, insert/delete/read text, headings, lists, HTML/Markdown
 - layout: pages, breaks, columns, headers/footers, page numbering
 - tables: create and format tables
+- charts: `add_chart_end`, `list_charts`, `format_chart_plot_area`, `get_waterfall_totals`
 - watermarks: watermarks
 - links/bookmarks: hyperlinks and bookmarks
 - properties: document properties
@@ -133,6 +135,8 @@ Main tool categories:
 - signatures: signing and signature metadata
 - comments/notes: comments, footnotes/endnotes
 - export/render: export (including Docling, signed PDF, and XPS advanced export), page rendering
+
+Use `add_chart_end` with `chart_type="column"` or `"waterfall"`, a shared `categories` list, and series objects containing `name` and numeric `values` matching the categories. Waterfall series also require a matching `is_subtotal` boolean array. Use the zero-based `chartIndex` and `seriesIndex` values from `list_charts` to select charts and series. `format_chart_plot_area` accepts a solid `fill_color` or a one-color `gradient` object, plus optional `line_color` and `line_width_points`; colors use six-digit RGB hex, and omitted formatting fields retain their values. `get_waterfall_totals` inspects all points in the selected waterfall series, or a single zero-based `point_index`.
 
 ## Example Workflow via an MCP Client
 

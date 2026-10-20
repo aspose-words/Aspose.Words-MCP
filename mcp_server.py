@@ -2,10 +2,12 @@ import base64
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastmcp import FastMCP
+from pydantic import Field
 
+from core import charts as _charts
 from core import comments as _comments
 from core import comparison as _comparison
 from core import content as _content
@@ -280,6 +282,64 @@ def tool_create_style(
         color_hex=color,
     )
     return {'style': s}
+
+
+def tool_add_chart_end(
+    doc_id: str,
+    chart_type: str,
+    categories: list[str],
+    series: list[dict],
+    width_points: float = 432,
+    height_points: float = 252,
+):
+    return {
+        'chartIndex': _charts.add_chart_end(
+            doc_id,
+            chart_type,
+            categories,
+            series,
+            width_points=width_points,
+            height_points=height_points,
+        )
+    }
+
+
+def tool_list_charts(doc_id: str):
+    return {'charts': _charts.list_charts(doc_id)}
+
+
+def tool_get_waterfall_totals(
+    doc_id: str,
+    chart_index: int,
+    series_index: int = 0,
+    point_index: Optional[int] = None,
+):
+    return {
+        'chartIndex': chart_index,
+        'seriesIndex': series_index,
+        'points': _charts.get_waterfall_totals(
+            doc_id, chart_index, series_index=series_index, point_index=point_index
+        ),
+    }
+
+
+def tool_format_chart_plot_area(
+    doc_id: str,
+    chart_index: int,
+    fill_color: Optional[str] = None,
+    gradient: Optional[dict] = None,
+    line_color: Optional[str] = None,
+    line_width_points: Optional[float] = None,
+):
+    _charts.format_chart_plot_area(
+        doc_id,
+        chart_index,
+        fill_color=fill_color,
+        gradient=gradient,
+        line_color=line_color,
+        line_width_points=line_width_points,
+    )
+    return {}
 
 
 def tool_add_table_end(
@@ -1219,6 +1279,91 @@ def register_tools() -> None:
             bold=bold,
             italic=italic,
             color=color,
+        )
+
+    @mcp.tool(description='Add a chart at the end of the document')
+    def add_chart_end(
+        doc_id: str,
+        chart_type: Annotated[str, Field(description='Chart type: column or waterfall')],
+        categories: list[str],
+        series: Annotated[
+            list[dict],
+            Field(
+                description=(
+                    'Series objects with name and numeric values matching categories; '
+                    'waterfall requires an is_subtotal boolean array matching categories. '
+                    'is_subtotal is only supported for waterfall charts.'
+                )
+            ),
+        ],
+        width_points: Annotated[float, Field(strict=True)] = 432,
+        height_points: Annotated[float, Field(strict=True)] = 252,
+    ):
+        return tool_add_chart_end(
+            doc_id,
+            chart_type,
+            categories,
+            series,
+            width_points=width_points,
+            height_points=height_points,
+        )
+
+    @mcp.tool(description='List charts in document traversal order with series metadata')
+    def list_charts(doc_id: str):
+        return tool_list_charts(doc_id)
+
+    @mcp.tool(description='Inspect total flags for waterfall chart data points')
+    def get_waterfall_totals(
+        doc_id: str,
+        chart_index: Annotated[
+            int, Field(strict=True, description='Zero-based chartIndex from list_charts')
+        ],
+        series_index: Annotated[
+            int, Field(strict=True, description='Zero-based seriesIndex from list_charts')
+        ] = 0,
+        point_index: Annotated[
+            Optional[int],
+            Field(strict=True, description='Zero-based data position; omit to inspect all points'),
+        ] = None,
+    ):
+        return tool_get_waterfall_totals(
+            doc_id, chart_index, series_index=series_index, point_index=point_index
+        )
+
+    @mcp.tool(description='Set fill and line formatting for a chart plot area')
+    def format_chart_plot_area(
+        doc_id: str,
+        chart_index: Annotated[
+            int, Field(strict=True, description='Zero-based chartIndex from list_charts')
+        ],
+        fill_color: Annotated[
+            Optional[str],
+            Field(description='RGB hex with optional #; mutually exclusive with gradient'),
+        ] = None,
+        gradient: Annotated[
+            Optional[dict],
+            Field(
+                description=(
+                    'One-color gradient: required color (RGB hex with optional #); '
+                    'style defaults to horizontal (also vertical, diagonal_up, diagonal_down, '
+                    'from_corner, from_center); variant defaults to variant1 (through variant4); '
+                    'degree defaults to 0.5 (0 to 1 inclusive). '
+                    'Omitted formatting fields retain values.'
+                )
+            ),
+        ] = None,
+        line_color: Annotated[Optional[str], Field(description='RGB hex with optional #')] = None,
+        line_width_points: Annotated[
+            Optional[float], Field(strict=True, description='Positive finite line width in points')
+        ] = None,
+    ):
+        return tool_format_chart_plot_area(
+            doc_id,
+            chart_index,
+            fill_color=fill_color,
+            gradient=gradient,
+            line_color=line_color,
+            line_width_points=line_width_points,
         )
 
     @mcp.tool(description='Add a table at the end of the document')
